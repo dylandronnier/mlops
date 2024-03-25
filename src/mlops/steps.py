@@ -52,13 +52,7 @@ def train_and_evaluate(
         desc="Training",
         total=len(dataset["train"]) // batch_size,
     ):
-        # print(batch["image"].shape)
-        state, loss, logits = train_step(state, batch)
-        summary_train = summary_train.merge(
-            Metrics.single_from_model_output(
-                loss=loss, logits=logits, labels=batch["label"]
-            )
-        )
+        state, summary_train = train_step(state, summary_train, batch)
 
     summary_eval = Metrics.empty()
     for batch in tqdm(
@@ -66,18 +60,13 @@ def train_and_evaluate(
         desc=f"Evaluating:",
         total=len(dataset["test"]) // batch_size,
     ):
-        loss, logits = eval_step(state, batch)
-        summary_eval = summary_eval.merge(
-            Metrics.single_from_model_output(
-                loss=loss, logits=logits, labels=batch["label"]
-            )
-        )
+        summary_eval = eval_step(state, summary_eval, batch)
 
     return state, {"train": summary_train.compute(), "eval": summary_eval.compute()}
 
 
 @jit
-def train_step(state: TrainState, batch):
+def train_step(state: TrainState, metrics: Metrics, batch):
     """Computes gradients, loss and accuracy for a single batch."""
 
     def loss_fn(params):
@@ -91,13 +80,23 @@ def train_step(state: TrainState, batch):
 
     (loss, logits), grads = value_and_grad(loss_fn, has_aux=True)(state.params)
     state = state.apply_gradients(grads=grads)
-    return state, loss, logits
+    metrics = metrics.merge(
+        Metrics.single_from_model_output(
+            loss=loss, logits=logits, labels=batch["label"]
+        )
+    )
+    return state, metrics
 
 
 @jit
-def eval_step(state: TrainState, batch):
+def eval_step(state: TrainState, metrics: Metrics, batch):
     logits = state.apply_fn({"params": state.params}, batch["image"])
-    loss = jnp.mean(
-        softmax_cross_entropy_with_integer_labels(logits=logits, labels=batch["label"])
+    loss = softmax_cross_entropy_with_integer_labels(
+        logits=logits, labels=batch["label"]
     )
-    return loss, logits
+    metrics = metrics.merge(
+        Metrics.single_from_model_output(
+            loss=loss, logits=logits, labels=batch["label"]
+        )
+    )
+    return metrics

@@ -7,7 +7,7 @@ import numpy as np
 import optuna
 from datasets import DatasetDict
 from flax.training.early_stopping import EarlyStopping
-from jax import random
+from jax import random, tree_map
 from matplotlib.pyplot import close
 from mlflow.data.huggingface_dataset import from_huggingface
 from pandas.io.json._normalize import nested_to_record
@@ -61,14 +61,13 @@ def objective(
 
     early_stop = EarlyStopping(patience=3, min_delta=1e-3)
 
-    print("begin !")
     for epoch in range(1, config.epochs_number + 1):
 
         state, summary = train_and_evaluate(
             state=state, dataset=dataset, batch_size=config.batch_size
         )
 
-        summary_dict = nested_to_record(summary)
+        summary_dict = tree_map(float, nested_to_record(summary))
 
         mlflow.log_metrics(summary_dict)
 
@@ -78,7 +77,7 @@ def objective(
             end="\n\n\n",
         )
 
-        early_stop = early_stop.update(summary["loss"])
+        early_stop = early_stop.update(summary_dict["eval.loss"])
 
         if early_stop.should_stop:
             print("Stopping due to no improvments")

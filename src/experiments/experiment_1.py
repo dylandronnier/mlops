@@ -18,22 +18,17 @@ def preprocessing(example: Dict[str, Any]) -> Dict[str, Any]:
 
 if __name__ == "__main__":
 
-    # key = random.key(0)
-    # model = CNN()
-
-    # params = model.init(key, jnp.ones((1, 28, 28, 1)))
-
     # Load the configuration search space
     config = Configsuggestion(
         model="CNN",
-        epochs_number=4,
-        batch_size=16,
+        epochs_number=2,
+        batch_size=32,
         lr=RangeFloat(name="learning rate", low=5e-4, high=5e-2),
         momentum=RangeFloat(name="momentum", low=0.7, high=0.95),
     )
 
     # Load dataset
-    dataset = load_dataset(path="mnist")
+    dataset = load_dataset(path="rassibassi/sample_mnist")
     dataset = dataset.with_format("jax")
 
     # Ensure the datasets is a Dataset Dictionary
