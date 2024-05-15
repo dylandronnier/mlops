@@ -1,4 +1,5 @@
-from typing import Iterable, List, Optional
+from collections.abc import Iterable
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,7 @@ def show_img(img: Array, ax=None, title: Optional[str] = None) -> None:
         ax.set_title(title)
 
 
-def show_img_grid(imgs: List[Array], titles: Iterable[str]) -> Figure:
+def show_img_grid(imgs: list[Array], titles: Iterable[str]) -> Figure:
     """Shows a grid of images."""
     n = int(np.ceil(len(imgs) ** 0.5))
     fig, axs = plt.subplots(n, n, figsize=(4 * n, 4 * n))

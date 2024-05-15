@@ -1,17 +1,16 @@
 from functools import partial
-from typing import Any, Dict
+from typing import Any
 
 import jax.numpy as jnp
 import mlflow
 from datasets import DatasetDict, load_dataset
-from mlops.dist import RangeFloat
-from mlops.steps import Configsuggestion
-from mlops.train import champion_callback, objective
 from optuna import create_study
 from optuna.integration.mlflow import MLflowCallback
+from train.train import Configsuggestion, champion_callback, objective
+from utils.dist import RangeFloat
 
 
-def preprocessing(example: Dict[str, Any]) -> Dict[str, Any]:
+def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
     example["image"] = example["image"][..., jnp.newaxis] / 255.0
     return example
 

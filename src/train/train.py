@@ -6,25 +6,32 @@ import mlflow
 import numpy as np
 import optuna
 from datasets import DatasetDict
+from deploy.serve import FlaxModel
 from flax.training.early_stopping import EarlyStopping
 from jax import random, tree_map
 from matplotlib.pyplot import close
 from mlflow.data.huggingface_dataset import from_huggingface
 from pandas.io.json._normalize import nested_to_record
-
-from mlops.dist import Distribution
-from mlops.serve import FlaxModel
-from mlops.steps import ExperimentConfig, create_train_state, train_and_evaluate
-from mlops.utils import show_img_grid
+from train.steps import (
+    ExperimentConfig,
+    create_train_state,
+    train_and_evaluate,
+)
+from utils.dist import Distribution, make_config_suggest
+from utils.utils import show_img_grid
 
 X = TypeVar(name="X")
 
 RUN_ID_ATTRIBUTE_KEY = "mlflow_run_id"
 
 
+Configsuggestion = make_config_suggest(ExperimentConfig)
+
+
 def champion_callback(
     study: optuna.study.Study, trial: optuna.trial.FrozenTrial
 ) -> None:
+    """Save the id of the best trial during the study."""
     if trial.value and trial.value <= study.best_value:
         study.set_user_attr(
             "winner_run_id", trial.system_attrs.get(RUN_ID_ATTRIBUTE_KEY)
@@ -56,7 +63,6 @@ def objective(
     # Init the training state
     rng = random.key(0)
     rng, init_rng = random.split(rng)
-    # model = config.model.__init__()
     state = create_train_state(init_rng, config)
 
     early_stop = EarlyStopping(patience=3, min_delta=1e-3)

@@ -6,8 +6,7 @@ from flax.serialization import from_bytes
 from jax.nn import softmax
 from jax.random import key
 from mlflow.pyfunc import PythonModel, PythonModelContext
-
-from mlops.models.cnn import CNN
+from models.cnn import CNN
 
 
 class FlaxModel(PythonModel):

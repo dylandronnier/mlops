@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Any, Tuple
+from typing import Any
 
 import jax.numpy as jnp
+import models
 from clu import metrics
 from datasets import DatasetDict
 from flax import struct
@@ -11,26 +12,24 @@ from optax import sgd
 from optax.losses import softmax_cross_entropy_with_integer_labels
 from tqdm.auto import tqdm
 
-from mlops import models
-from mlops.dist import make_config_suggest
-
 
 @struct.dataclass
 class Metrics(metrics.Collection):
+    """Class that records the metrics through the training."""
+
     loss: metrics.Average.from_output("loss")
     accuracy: metrics.Accuracy
 
 
 @dataclass
 class ExperimentConfig:
+    """Class that."""
+
     model: str
     epochs_number: int
     batch_size: int
     lr: float
     momentum: float
-
-
-Configsuggestion = make_config_suggest(ExperimentConfig)
 
 
 def create_train_state(rng, config: ExperimentConfig) -> TrainState:
@@ -44,7 +43,8 @@ def create_train_state(rng, config: ExperimentConfig) -> TrainState:
 
 def train_and_evaluate(
     state: TrainState, dataset: DatasetDict, batch_size: int
-) -> Tuple[TrainState, dict[str, dict[str, Any]]]:
+) -> tuple[TrainState, dict[str, dict[str, Any]]]:
+    """2 loop for training and evaluation of the model."""
     summary_train = Metrics.empty()
 
     for batch in tqdm(

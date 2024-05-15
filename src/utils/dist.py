@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import asdict, fields, is_dataclass, make_dataclass
-from typing import Any, Dict, TypeVar
+from typing import Any, TypeVar
 
 from optuna.trial import Trial
 
@@ -35,7 +35,7 @@ class RangeFloat(Distribution[float]):
         return trial.suggest_float(name=self._name, low=self._low, high=self._high)
 
 
-def _sugg(d, trial: Trial) -> Dict[str, Any]:
+def _sugg(d, trial: Trial) -> dict[str, Any]:
     assert is_dataclass(d)
     args = dict()
     for k, v in asdict(d).items():
