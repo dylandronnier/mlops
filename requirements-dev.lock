@@ -6,6 +6,7 @@
 #   features: []
 #   all-features: false
 #   with-sources: false
+#   generate-hashes: false
 
 -e file:.
 absl-py==2.1.0
@@ -16,7 +17,7 @@ absl-py==2.1.0
     # via orbax-checkpoint
 aiofiles==23.2.1
     # via gradio
-aiohttp==3.9.4
+aiohttp==3.9.5
     # via datasets
     # via fsspec
 aiosignal==1.3.1
@@ -28,18 +29,21 @@ altair==5.3.0
     # via gradio
 aniso8601==9.0.1
     # via graphene
-annotated-types==0.6.0
+annotated-types==0.7.0
     # via pydantic
-anyio==4.3.0
+anyio==4.4.0
     # via httpx
     # via starlette
+    # via watchfiles
 attrs==23.2.0
     # via aiohttp
     # via jsonschema
     # via referencing
-blinker==1.7.0
+blinker==1.8.2
     # via flask
-certifi==2024.2.2
+cachetools==5.3.3
+    # via mlflow
+certifi==2024.6.2
     # via httpcore
     # via httpx
     # via requests
@@ -64,36 +68,44 @@ contourpy==1.2.1
     # via matplotlib
 cycler==0.12.1
     # via matplotlib
-datasets==2.18.0
+datasets==2.20.0
     # via mlops
+deprecated==1.2.14
+    # via opentelemetry-api
 dill==0.3.8
     # via datasets
     # via multiprocess
-docker==7.0.0
+dnspython==2.6.1
+    # via email-validator
+docker==7.1.0
     # via mlflow
+email-validator==2.1.1
+    # via fastapi
 entrypoints==0.4
     # via mlflow
-etils==1.8.0
+etils==1.9.2
     # via clu
     # via orbax-checkpoint
-fastapi==0.110.1
+fastapi==0.111.0
     # via gradio
+fastapi-cli==0.0.4
+    # via fastapi
 ffmpy==0.3.2
     # via gradio
-filelock==3.13.4
+filelock==3.15.1
     # via datasets
     # via huggingface-hub
 flask==3.0.3
     # via mlflow
-flax==0.8.2
+flax==0.8.4
     # via clu
     # via mlops
-fonttools==4.51.0
+fonttools==4.53.0
     # via matplotlib
 frozenlist==1.4.1
     # via aiohttp
     # via aiosignal
-fsspec==2024.2.0
+fsspec==2024.5.0
     # via datasets
     # via etils
     # via gradio-client
@@ -102,9 +114,9 @@ gitdb==4.0.11
     # via gitpython
 gitpython==3.1.43
     # via mlflow
-gradio==4.26.0
+gradio==4.36.1
     # via mlops
-gradio-client==0.15.1
+gradio-client==1.0.1
     # via gradio
 graphene==3.3
     # via mlflow
@@ -115,58 +127,64 @@ graphql-relay==3.2.0
     # via graphene
 greenlet==3.0.3
     # via sqlalchemy
-gunicorn==21.2.0
+gunicorn==22.0.0
     # via mlflow
 h11==0.14.0
     # via httpcore
     # via uvicorn
 httpcore==1.0.5
     # via httpx
+httptools==0.6.1
+    # via uvicorn
 httpx==0.27.0
+    # via fastapi
     # via gradio
     # via gradio-client
-huggingface-hub==0.22.2
+huggingface-hub==0.23.4
     # via datasets
     # via gradio
     # via gradio-client
 idna==3.7
     # via anyio
+    # via email-validator
     # via httpx
     # via requests
     # via yarl
 importlib-metadata==7.1.0
     # via mlflow
+    # via opentelemetry-api
 importlib-resources==6.4.0
     # via etils
     # via gradio
-itsdangerous==2.1.2
+itsdangerous==2.2.0
     # via flask
-jax==0.4.26
+jax==0.4.29
     # via chex
     # via clu
     # via flax
     # via mlops
     # via optax
     # via orbax-checkpoint
-jaxlib==0.4.26
+jaxlib==0.4.29
     # via chex
     # via clu
     # via optax
     # via orbax-checkpoint
-jinja2==3.1.3
+jinja2==3.1.4
     # via altair
+    # via fastapi
     # via flask
     # via gradio
     # via mlflow
-joblib==1.4.0
+joblib==1.4.2
     # via scikit-learn
-jsonschema==4.21.1
+jsonschema==4.22.0
     # via altair
 jsonschema-specifications==2023.12.1
     # via jsonschema
 kiwisolver==1.4.5
     # via matplotlib
-mako==1.3.3
+mako==1.3.5
     # via alembic
 markdown==3.6
     # via mlflow
@@ -177,7 +195,7 @@ markupsafe==2.1.5
     # via jinja2
     # via mako
     # via werkzeug
-matplotlib==3.8.4
+matplotlib==3.9.0
     # via gradio
     # via mlflow
     # via mlops
@@ -189,7 +207,7 @@ ml-dtypes==0.4.0
     # via jax
     # via jaxlib
     # via tensorstore
-mlflow==2.11.3
+mlflow==2.13.2
     # via mlops
 msgpack==1.0.8
     # via flax
@@ -223,6 +241,14 @@ numpy==1.26.4
     # via scikit-learn
     # via scipy
     # via tensorstore
+opentelemetry-api==1.25.0
+    # via mlflow
+    # via opentelemetry-sdk
+    # via opentelemetry-semantic-conventions
+opentelemetry-sdk==1.25.0
+    # via mlflow
+opentelemetry-semantic-conventions==0.46b0
+    # via opentelemetry-sdk
 opt-einsum==3.3.0
     # via jax
 optax==0.2.2
@@ -233,15 +259,15 @@ optuna==3.6.1
     # via optuna-integration
 optuna-integration==3.6.0
     # via mlops
-orbax-checkpoint==0.5.9
+orbax-checkpoint==0.5.16
     # via flax
-orjson==3.10.0
+orjson==3.10.5
+    # via fastapi
     # via gradio
-packaging==23.2
+packaging==24.1
     # via altair
     # via clu
     # via datasets
-    # via docker
     # via gradio
     # via gradio-client
     # via gunicorn
@@ -267,21 +293,24 @@ pyarrow==15.0.2
     # via mlflow
 pyarrow-hotfix==0.6
     # via datasets
-pydantic==2.7.0
+pydantic==2.7.4
     # via fastapi
     # via gradio
-pydantic-core==2.18.1
+pydantic-core==2.18.4
     # via pydantic
 pydub==0.25.1
     # via gradio
-pygments==2.17.2
+pygments==2.18.0
     # via rich
 pyparsing==3.1.2
     # via matplotlib
 python-dateutil==2.9.0.post0
     # via matplotlib
     # via pandas
+python-dotenv==1.0.1
+    # via uvicorn
 python-multipart==0.0.9
+    # via fastapi
     # via gradio
 pytz==2024.1
     # via mlflow
@@ -295,12 +324,13 @@ pyyaml==6.0.1
     # via mlflow
     # via optuna
     # via orbax-checkpoint
+    # via uvicorn
 querystring-parser==1.2.4
     # via mlflow
-referencing==0.34.0
+referencing==0.35.1
     # via jsonschema
     # via jsonschema-specifications
-requests==2.31.0
+requests==2.32.3
     # via datasets
     # via docker
     # via huggingface-hub
@@ -308,21 +338,21 @@ requests==2.31.0
 rich==13.7.1
     # via flax
     # via typer
-rpds-py==0.18.0
+rpds-py==0.18.1
     # via jsonschema
     # via referencing
-ruff==0.3.7
+ruff==0.4.9
     # via gradio
-scikit-learn==1.4.2
+scikit-learn==1.5.0
     # via mlflow
-scipy==1.13.0
+scipy==1.13.1
     # via jax
     # via jaxlib
     # via mlflow
     # via scikit-learn
 semantic-version==2.10.0
     # via gradio
-setuptools==69.4.0
+setuptools==70.0.0
     # via chex
 shellingham==1.5.4
     # via typer
@@ -335,33 +365,34 @@ smmap==5.0.1
 sniffio==1.3.1
     # via anyio
     # via httpx
-sqlalchemy==2.0.29
+sqlalchemy==2.0.30
     # via alembic
     # via mlflow
     # via optuna
-sqlparse==0.4.4
+sqlparse==0.5.0
     # via mlflow
 starlette==0.37.2
     # via fastapi
-tensorstore==0.1.56
+tensorstore==0.1.61
     # via flax
     # via orbax-checkpoint
-threadpoolctl==3.4.0
+threadpoolctl==3.5.0
     # via scikit-learn
 tomlkit==0.12.0
     # via gradio
 toolz==0.12.1
     # via altair
     # via chex
-tornado==6.4
+tornado==6.4.1
     # via mlops
-tqdm==4.66.2
+tqdm==4.66.4
     # via datasets
     # via huggingface-hub
     # via optuna
 typer==0.12.3
+    # via fastapi-cli
     # via gradio
-typing-extensions==4.11.0
+typing-extensions==4.12.2
     # via alembic
     # via chex
     # via clu
@@ -371,6 +402,7 @@ typing-extensions==4.11.0
     # via gradio
     # via gradio-client
     # via huggingface-hub
+    # via opentelemetry-sdk
     # via orbax-checkpoint
     # via pydantic
     # via pydantic-core
@@ -378,21 +410,31 @@ typing-extensions==4.11.0
     # via typer
 tzdata==2024.1
     # via pandas
+ujson==5.10.0
+    # via fastapi
 urllib3==2.2.1
     # via docker
-    # via requests
-uvicorn==0.29.0
     # via gradio
+    # via requests
+uvicorn==0.30.1
+    # via fastapi
+    # via gradio
+uvloop==0.19.0
+    # via uvicorn
+watchfiles==0.22.0
+    # via uvicorn
 websockets==11.0.3
     # via gradio-client
-werkzeug==3.0.2
+    # via uvicorn
+werkzeug==3.0.3
     # via flask
 wrapt==1.16.0
     # via clu
+    # via deprecated
 xxhash==3.4.1
     # via datasets
 yarl==1.9.4
     # via aiohttp
-zipp==3.18.1
+zipp==3.19.2
     # via etils
     # via importlib-metadata

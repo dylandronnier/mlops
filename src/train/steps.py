@@ -35,7 +35,7 @@ class ExperimentConfig:
 def create_train_state(rng, config: ExperimentConfig) -> TrainState:
     """Creates initial `TrainState`."""
     mod = getattr(models, config.model)()
-    params = mod.init(rng, jnp.ones((16, 28, 28, 1)))["params"]
+    params = mod.init(rng, jnp.ones((16, 28, 28, 1)))
     return TrainState.create(
         apply_fn=mod.apply, params=params, tx=sgd(config.lr, config.momentum)
     )
@@ -70,7 +70,7 @@ def train_step(state: TrainState, metrics: Metrics, batch):
     """Computes gradients, loss and accuracy for a single batch."""
 
     def loss_fn(params):
-        logits = state.apply_fn({"params": params}, batch["image"])
+        logits = state.apply_fn(params, batch["image"])
         loss = jnp.mean(
             softmax_cross_entropy_with_integer_labels(
                 logits=logits, labels=batch["label"]
@@ -90,7 +90,7 @@ def train_step(state: TrainState, metrics: Metrics, batch):
 
 @jit
 def eval_step(state: TrainState, metrics: Metrics, batch):
-    logits = state.apply_fn({"params": state.params}, batch["image"])
+    logits = state.apply_fn(state.params, batch["image"])
     loss = softmax_cross_entropy_with_integer_labels(
         logits=logits, labels=batch["label"]
     )
