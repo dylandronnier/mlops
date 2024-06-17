@@ -3,7 +3,7 @@ import mlflow.pyfunc
 import numpy as np
 from jax.image import resize
 
-model = mlflow.pyfunc.load_model(model_uri="models:/cnn/1")
+model = mlflow.pyfunc.load_model(model_uri="models:/cnn_nnx/1")
 
 
 def prediction(img):

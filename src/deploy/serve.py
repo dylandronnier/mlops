@@ -1,30 +1,24 @@
 from typing import Optional
 
 import numpy as np
-from flax.core import FrozenDict
+from flax import nnx
 from flax.serialization import from_bytes
 from jax.nn import softmax
-from jax.random import key
 from mlflow.pyfunc import PythonModel, PythonModelContext
-from models.cnn import CNN
 
 
 class FlaxModel(PythonModel):
-    def __init__(self, params: Optional[FrozenDict] = None) -> None:
-
-        self._cnn = CNN()
-        rng = key(0)
-        self._params = self._cnn.init(rng, np.ones([1, 28, 28, 1]))["params"]
-
-        if params:
-            self._params = params
+    def __init__(self, graphdef: nnx.GraphDef, state: Optional[nnx.State]) -> None:
+        self._graphdef = graphdef
+        if state:
+            self._model = nnx.merge(self._graphdef, state)
             self._init = True
         else:
             self._init = False
 
     def load_context(self, context: PythonModelContext) -> None:
         if not self._init:
-            self._params = from_bytes(self._params, context.artifacts["weights"])
+            self._state = from_bytes(self._state, context.artifacts["weights"])
 
-    def predict(self, context: PythonModelContext, model_input):
-        return softmax(self._cnn.apply({"params": self._params}, model_input))
+    def predict(self, context: PythonModelContext, model_input) -> np.ndarray:
+        return np.array(softmax(self._model(model_input)))

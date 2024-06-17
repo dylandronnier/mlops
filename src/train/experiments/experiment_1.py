@@ -3,7 +3,7 @@ from typing import Any
 
 import jax.numpy as jnp
 import mlflow
-from datasets import DatasetDict, load_dataset
+from datasets import DatasetDict, Split, load_dataset, percent
 from optuna import create_study
 from optuna.integration.mlflow import MLflowCallback
 from train.train import Configsuggestion, champion_callback, objective
@@ -20,14 +20,19 @@ if __name__ == "__main__":
     # Load the configuration search space
     config = Configsuggestion(
         model="CNN",
-        epochs_number=2,
+        epochs_number=4,
         batch_size=32,
         lr=RangeFloat(name="learning rate", low=5e-4, high=5e-2),
         momentum=RangeFloat(name="momentum", low=0.7, high=0.95),
+        seed=42,
     )
 
     # Load dataset
-    dataset = load_dataset(path="rassibassi/sample_mnist")
+    dataset = load_dataset(
+        path="ylecun/mnist",
+        split={"train": "train[:5%]", "test": "test[:5%]"},
+    )
+
     dataset = dataset.with_format("jax")
 
     # Ensure the datasets is a Dataset Dictionary
@@ -44,18 +49,18 @@ if __name__ == "__main__":
     mlflc = MLflowCallback(metric_name="Loss", create_experiment=True)
 
     # New study for
-    study = create_study(direction="minimize", study_name="new baz")
+    study = create_study(direction="minimize", study_name="foox")
 
     # Optimization
     study.optimize(
         mlflc.track_in_mlflow()(
-            partial(objective, dist_config=config, dataset=rescaled_dataset)
+            partial(objective, dist_config=config, dataset=rescaled_dataset),
         ),
-        n_trials=4,
-        timeout=600,
+        n_trials=5,
+        timeout=2_000,
         callbacks=[mlflc, champion_callback],
     )
     best_run = study.user_attrs.get("winner_run_id")
     artifact_uri = mlflow.get_run(best_run).info.artifact_uri
     if artifact_uri:
-        mlflow.register_model(model_uri=artifact_uri + "/trained_model", name="cnn")
+        mlflow.register_model(model_uri=artifact_uri + "/trained_model", name="cnn_nnx")
