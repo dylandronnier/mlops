@@ -1,9 +1,7 @@
 from dataclasses import asdict, dataclass
 
 import mlflow
-import models
 import numpy as np
-import optuna
 from datasets import DatasetDict
 from deploy.serve import FlaxModel
 from flax import nnx
@@ -13,47 +11,31 @@ from matplotlib.pyplot import close
 from mlflow.data.huggingface_dataset import from_huggingface
 from optax import sgd
 from tqdm import tqdm
-from train.steps import eval_step, pred_step, train_step
-from utils.dist import Distribution, make_config_suggest
 from utils.utils import show_img_grid
 
-RUN_ID_ATTRIBUTE_KEY = "mlflow_run_id"
+from train.steps import eval_step, pred_step, train_step
 
 
 @dataclass
-class ExperimentConfig:
+class TrainingConfig:
     """Class that."""
 
-    model: str
+    # Number of epochs
     epochs_number: int
+
+    # Batch size
     batch_size: int
+
+    # Learning rate
     lr: float
+
+    # Momentum.
     momentum: float
-    seed: int
 
 
-Configsuggestion = make_config_suggest(ExperimentConfig)
-
-
-def champion_callback(
-    study: optuna.study.Study, trial: optuna.trial.FrozenTrial
-) -> None:
-    """Save the id of the best trial during the study."""
-    if trial.value and trial.value <= study.best_value:
-        study.set_user_attr(
-            "winner_run_id", trial.system_attrs.get(RUN_ID_ATTRIBUTE_KEY)
-        )
-
-
-def objective(
-    trial: optuna.trial.Trial,
-    dataset: DatasetDict,
-    dist_config: Distribution[ExperimentConfig],
+def train_and_evaluate(
+    model: nnx.Module, dataset: DatasetDict, config: TrainingConfig
 ) -> float:
-
-    # Suggest config
-    config = dist_config.suggest(trial=trial)
-
     # Log configuration parameters
     mlflow.log_params(asdict(config))
 
@@ -71,7 +53,6 @@ def objective(
 
     early_stop = EarlyStopping(patience=3, min_delta=1e-3)
 
-    model = models.CNN(rngs=nnx.Rngs(config.seed + trial.number))
     optimizer = nnx.Optimizer(model, sgd(config.lr, config.momentum))
     metrics = nnx.MultiMetric(
         accuracy=nnx.metrics.Accuracy(),
@@ -80,8 +61,6 @@ def objective(
     mlflow.log_param(
         "nb_parameters", sum(p.size for p in tree_leaves(nnx.split(model)[1]))
     )
-
-    # print(nnx.display(model))
 
     for epoch in range(1, config.epochs_number + 1):
 
@@ -128,7 +107,7 @@ def objective(
     mlflow.pyfunc.log_model(
         artifact_path="trained_model",
         python_model=FlaxModel(*nnx.split(model)),
-        input_example=np.ones((1, 28, 28, 1)),
+        input_example=np.array(images["image"]),
         # registered_model_name="cnn",
     )
     return early_stop.best_metric

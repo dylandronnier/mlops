@@ -32,7 +32,7 @@ class MlpBlock(nnx.Module):
         )
         self.dropout2 = nnx.Dropout(rate=dropout_rate, rngs=rngs)
 
-    def __call__(self, x, *, deterministic):
+    def __call__(self, x, *, deterministic: bool):
         """Applies Transformer MlpBlock module."""
         # First layer
         x = self.dropout1(nnx.gelu(self.dense1(x)), deterministic=deterministic)
@@ -41,8 +41,8 @@ class MlpBlock(nnx.Module):
         return x
 
 
-class Encoder1DBlock(nnx.Module):
-    """Transformer encoder layer.
+class AttentionBlock(nnx.Module):
+    """Attention block.
 
     Attributes
     ----------
@@ -83,7 +83,7 @@ class Encoder1DBlock(nnx.Module):
             rngs=rngs,
         )
 
-    def __call__(self, inputs, *, deterministic):
+    def __call__(self, inputs, *, deterministic: bool):
         """Applies Encoder1DBlock module.
 
         Args:
@@ -110,10 +110,6 @@ class Encoder1DBlock(nnx.Module):
         return x + y
 
 
-class PosParams(nnx.Param):
-    pass
-
-
 class VisionTransformer(nnx.Module):
     """VisionTransformer."""
 
@@ -121,6 +117,8 @@ class VisionTransformer(nnx.Module):
         self,
         num_classes: int,
         patches_size: int,
+        num_patches: int,
+        embed_dim: int,
         layers: int,
         mlp_dim: int,
         num_heads: int,
@@ -129,11 +127,18 @@ class VisionTransformer(nnx.Module):
         *,
         rngs: nnx.Rngs,
     ) -> None:
-        self.pos_embedding = PosParams(jnp.zeros((patches_size, patches_size)))
+        self.pos_embedding = nnx.Param(
+            nnx.initializers.normal(stddev=1.0)(
+                rngs.params(), shape=(1, 1 + num_patches, embed_dim)
+            )
+        )
+        self.cls_token = nnx.Param(
+            nnx.initializers.normal(stddev=1.0)(rngs.params(), shape=(1, 1, embed_dim))
+        )
         self.patch_embedding = nnx.Conv(
-            in_features=1,
-            out_features=patches_size,
-            kernel_size=patches_size,
+            in_features=3,
+            out_features=embed_dim,
+            kernel_size=(patches_size, patches_size),
             strides=patches_size,
             padding="VALID",
             rngs=rngs,
@@ -141,9 +146,9 @@ class VisionTransformer(nnx.Module):
         self.transformer_layers = []
         for _ in range(layers):
             self.transformer_layers.append(
-                Encoder1DBlock(
-                    in_features=patches_size,
-                    out_features=patches_size,
+                AttentionBlock(
+                    in_features=embed_dim,
+                    out_features=embed_dim,
                     mlp_dim=mlp_dim,
                     num_heads=num_heads,
                     dropout_rate=dropout_rate,
@@ -162,8 +167,13 @@ class VisionTransformer(nnx.Module):
 
         x = jnp.reshape(x, [n, h * w, c])
 
-        for t in self.transformer_layers:
-            x = t(x, deterministic=not train)
+        # Add CLS token and positional encoding
+        cls_token = self.cls_token.repeat(n, axis=0)
+        x = jnp.concatenate([cls_token, x], axis=1)
+        x = x + self.pos_embedding[:, : h * w + 1]
+
+        for attention_block in self.transformer_layers:
+            x = attention_block(x, deterministic=not train)
 
         x = x[:, 0]
 

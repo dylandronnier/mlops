@@ -15,6 +15,15 @@ class Distribution[X](ABC):
 
 class RangeInt(Distribution[int]):
     def __init__(self, name: str, low: int, high: int) -> None:
+        """RangeInt.
+
+        Args:
+        ----
+            name: Name of the hyperparameter.
+            low: Lower bound.
+            high: Upper bound.
+
+        """
         assert low < high
         self._name = name
         self._low = low
@@ -26,6 +35,15 @@ class RangeInt(Distribution[int]):
 
 class RangeFloat(Distribution[float]):
     def __init__(self, name: str, low: float, high: float) -> None:
+        """RangeFloat.
+
+        Args:
+        ----
+            name: Name of the hyperparameter.
+            low: Lower bound.
+            high: Upper bound.
+
+        """
         assert low < high
         self._name = name
         self._low = low
