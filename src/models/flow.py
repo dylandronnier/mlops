@@ -1,21 +1,24 @@
 from typing import Sequence
 
-import flax.linen as nn
 import jax.numpy as jnp
+from flax import nnx
 from jax import random
 from jax.lax import clamp
 from jax.scipy.stats import norm
 
 
-class ImageFlow(nn.Module):
+class ImageFlow(nnx.Module):
+    def __init__(self, *, rngs: nnx.Rngs) -> None:
+        super().__init__()
+
     flows: Sequence[
-        nn.Module
+        nnx.Module
     ]  # A list of flows (each a nn.Module) that should be applied on the images.
     import_samples: int = (
         8  # Number of importance samples to use during testing (see explanation below).
     )
 
-    def __call__(self, x, rng, testing=False):
+    def __call__(self, x, testing=False):
         if not testing:
             bpd, rng = self._get_likelihood(x, rng)
         else:

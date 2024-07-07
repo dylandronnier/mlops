@@ -21,4 +21,4 @@ class FlaxModel(PythonModel):
             self._state = from_bytes(self._state, context.artifacts["weights"])
 
     def predict(self, context: PythonModelContext, model_input) -> np.ndarray:
-        return np.array(softmax(self._model(model_input)))
+        return np.array(softmax(self._model(model_input, train=False)))

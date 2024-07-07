@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Any
 
 import jax.numpy as jnp
@@ -25,15 +24,6 @@ RUN_ID_ATTRIBUTE_KEY = "mlflow_run_id"
 TrainingConfigSuggestion = make_config_suggest(TrainingConfig)
 
 
-@dataclass
-class ExperimentConfig:
-    # Number of trials
-    num_trials: int
-
-    # Seed of the experiment
-    seed: int
-
-
 def champion_callback(
     study: optuna.study.Study, trial: optuna.trial.FrozenTrial
 ) -> None:
@@ -44,10 +34,16 @@ def champion_callback(
         )
 
 
-if __name__ == "__main__":
-    # Fix parameters experiment through cli
-    exp = tyro.cli(ExperimentConfig)
+@tyro.cli
+def main(num_trials: int, seed: int = 42) -> None:
+    """Run hyperparameters search experiment with a basic CNN.
 
+    Args:
+    ----
+      num_trials : number of trials in the research of hyperparameters.
+      seed : seed of the experiment.
+
+    """
     # Load the configuration search space
     dist_config = TrainingConfigSuggestion(
         epochs_number=4,
@@ -78,7 +74,7 @@ if __name__ == "__main__":
     mlflc = MLflowCallback(metric_name="Loss", create_experiment=True)
 
     # New study for
-    sampler = optuna.samplers.TPESampler(seed=exp.seed)
+    sampler = optuna.samplers.TPESampler(seed=seed)
     study = optuna.create_study(
         sampler=sampler, direction="minimize", study_name="foox"
     )
@@ -87,12 +83,12 @@ if __name__ == "__main__":
     study.optimize(
         mlflc.track_in_mlflow()(
             lambda trial: train_and_evaluate(
-                CNN(rngs=nnx.Rngs(exp.seed + trial.number)),
+                CNN(rngs=nnx.Rngs(seed + trial.number)),
                 rescaled_dataset,
                 dist_config.suggest(trial),
             )
         ),
-        n_trials=exp.num_trials,
+        n_trials=num_trials,
         timeout=2_000,
         callbacks=[mlflc, champion_callback],
     )

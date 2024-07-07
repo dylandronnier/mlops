@@ -8,7 +8,6 @@ from flax import nnx
 from flax.training.early_stopping import EarlyStopping
 from jax import tree_leaves
 from matplotlib.pyplot import close
-from mlflow.data.huggingface_dataset import from_huggingface
 from optax import sgd
 from tqdm import tqdm
 from utils.utils import show_img_grid
@@ -18,6 +17,7 @@ from train.steps import eval_step, pred_step, train_step
 
 @dataclass
 class TrainingConfig:
+
     """Class that."""
 
     # Number of epochs
@@ -78,7 +78,7 @@ def train_and_evaluate(
 
         for batch in tqdm(
             dataset["test"].iter(batch_size=config.batch_size, drop_last_batch=True),
-            desc=f"Evaluating:",
+            desc="Evaluating:",
             total=len(dataset["test"]) // config.batch_size,
         ):
             eval_step(model=model, metrics=metrics, batch=batch)
@@ -99,7 +99,7 @@ def train_and_evaluate(
     fig = show_img_grid(images["image"], pred_step(model, images))
     mlflow.log_figure(
         figure=fig,
-        artifact_file=f"inference.pdf",
+        artifact_file="inference.pdf",
     )
     close(fig)
 

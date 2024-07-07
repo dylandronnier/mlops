@@ -1,38 +1,35 @@
-from dataclasses import dataclass
+import enum
 from typing import Any
 
-import jax.numpy as jnp
 import mlflow
 import tyro
 from datasets import DatasetDict, load_dataset
 from flax import nnx
 from models import VisionTransformer
-from optuna.integration.mlflow import MLflowCallback
+from models.resnet import Resnet9
 from train import TrainingConfig, train_and_evaluate
 
 
 def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
     """Normalize the image dataset."""
-    example["image"] = example["image"][..., jnp.newaxis] / 255
+    example["image"] = example["img"] / 255
     return example
 
-
-RUN_ID_ATTRIBUTE_KEY = "mlflow_run_id"
-
-
-@dataclass
-class ExperimentConfig:
-    # training config
-    training_config: TrainingConfig
-
-    # Seed of the experiment
-    seed: int
+class Model(enum.Enum):
+    ViT = enum.auto()
+    ResNet = enum.auto()
 
 
-if __name__ == "__main__":
-    # Fix parameters experiment through cli
-    exp = tyro.cli(ExperimentConfig)
+@tyro.cli
+def main(training_config: TrainingConfig, model: Model, seed: int = 42) -> None:
+    """Train a VisionTransformer on the CIFAR10 dataset.
 
+    Args:
+      training_config: Hyperparameters of the training.
+      model: Model architecture.
+      seed: Seed of the experiment.
+
+    """
     # Load dataset
     dataset = load_dataset(
         path="uoft-cs/cifar10",
@@ -51,17 +48,21 @@ if __name__ == "__main__":
     # Enable system metrics logging by mlflow
     mlflow.enable_system_metrics_logging()
 
-    model = VisionTransformer(
-        embed_dim=256,
-        mlp_dim=512,
-        num_heads=8,
-        layers=6,
-        patches_size=4,
-        num_patches=64,
-        num_classes=10,
-        dropout_rate=0.2,
-        attendion_dropout_rate=0.2,
-        rngs=nnx.Rngs(exp.seed),
-    )
+    if model == Model.ResNet:
+        mod = Resnet9(num_classes=10, rngs=nnx.Rngs(seed))
+    else:
+        mod = VisionTransformer(
+            embed_dim=256,
+            mlp_dim=512,
+            num_heads=8,
+            layers=6,
+            patches_size=4,
+            num_patches=64,
+            num_classes=10,
+            dropout_rate=0.2,
+            attendion_dropout_rate=0.2,
+            rngs=nnx.Rngs(seed),
+        )
 
-    train_and_evaluate(model, rescaled_dataset, exp.training_config)
+
+    train_and_evaluate(mod, rescaled_dataset, training_config)
