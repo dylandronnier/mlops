@@ -2,7 +2,8 @@ from flax import nnx
 from optax.losses import softmax_cross_entropy_with_integer_labels
 
 
-def loss_fn(model, batch, train):
+def loss_fn(model, batch, train: bool):
+    """Cross entropy losss function."""
     logits = model(batch["image"], train)
     loss = softmax_cross_entropy_with_integer_labels(
         logits=logits, labels=batch["label"]

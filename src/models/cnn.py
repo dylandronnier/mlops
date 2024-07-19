@@ -15,7 +15,7 @@ class CNN(nnx.Module):
         self.linear1 = nnx.Linear(3136, 256, rngs=rngs)
         self.linear2 = nnx.Linear(256, 10, rngs=rngs)
 
-    def __call__(self, x, train):
+    def __call__(self, x, train: bool):
         x = nnx.avg_pool(self.bb1(x, train), window_shape=(2,2), strides=(2,2))
         x = nnx.avg_pool(self.bb2(x, train), window_shape=(2,2), strides=(2,2))
         x = x.reshape(x.shape[0], -1)  # flatten

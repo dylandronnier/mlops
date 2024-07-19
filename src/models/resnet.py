@@ -1,4 +1,5 @@
 from flax import nnx
+from jax import Array
 from jax.numpy import mean
 
 from models._basic_cnn_block import BasicBlock3
@@ -6,15 +7,7 @@ from models._basic_cnn_block import BasicBlock3
 
 class ResBlock(nnx.Module):
 
-    """Residual Block.
-
-    Attributes
-    ----------
-        in_features (int): Number of input channels.
-        out_features (int): Number of output channels.
-        kernel_size (Tuple): Kernel size.
-
-    """
+    """Residual Block."""
 
     def __init__(
         self,
@@ -23,7 +16,15 @@ class ResBlock(nnx.Module):
         *,
         rngs: nnx.Rngs,
     ) -> None:
+        """Construct a Residual Block
 
+        Args:
+        ----
+            in_features (int): Number of input channels.
+            out_features (int): Number of output channels.
+            rngs: Key for the random initialization of the paramters.
+
+        """
         self.first_conv = nnx.Conv(
             in_features=in_features,
             out_features=out_features,
@@ -52,7 +53,7 @@ class ResBlock(nnx.Module):
             epsilon=1e-5, momentum=0.9, num_features=out_features, rngs=rngs
         )
 
-    def __call__(self, x, train: bool = True):
+    def __call__(self, x: Array, train: bool = True):
         """Run Residual Block.
 
         Args:
@@ -82,7 +83,9 @@ class ResBlock(nnx.Module):
 
 class Resnet9(nnx.Module):
 
-    def __init__(self, num_classes, *, rngs: nnx.Rngs) -> None:
+    """Resnet9 is a Residual Neural Network composed of ."""
+
+    def __init__(self, num_classes: int, *, rngs: nnx.Rngs) -> None:
         self.first_basic = BasicBlock3(in_features=3, out_features=64, rngs=rngs)
         self.second_basic = BasicBlock3(in_features=64, out_features=128, rngs=rngs)
 

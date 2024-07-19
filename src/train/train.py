@@ -73,7 +73,7 @@ def train_and_evaluate(
 
         # Log training metrics
         for metric, value in metrics.compute().items():  # compute metrics
-            mlflow.log_metric(f"train_{metric}", value, step=epoch)  # record metrics
+            mlflow.log_metric(key=f"train_{metric}", value=float(value), step=epoch)  # record metrics
             metrics.reset()  # reset metrics for test set
 
         for batch in tqdm(
@@ -87,7 +87,7 @@ def train_and_evaluate(
         for metric, value in metrics.compute().items():
             if metric == "loss":
                 early_stop = early_stop.update(value)
-            mlflow.log_metric(f"test_{metric}", value, step=epoch)
+            mlflow.log_metric(key=f"test_{metric}", value=float(value), step=epoch)
             metrics.reset()  # reset metrics for next training epoch
 
         if early_stop.should_stop:

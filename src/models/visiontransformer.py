@@ -1,10 +1,10 @@
-from typing import Optional
 
 import jax.numpy as jnp
 from flax import nnx
 
 
 class MlpBlock(nnx.Module):
+
     """Transformer MLP / feed-forward block."""
 
     def __init__(
@@ -42,6 +42,7 @@ class MlpBlock(nnx.Module):
 
 
 class AttentionBlock(nnx.Module):
+
     """Attention block.
 
     Attributes
@@ -111,6 +112,7 @@ class AttentionBlock(nnx.Module):
 
 
 class VisionTransformer(nnx.Module):
+
     """VisionTransformer."""
 
     def __init__(
