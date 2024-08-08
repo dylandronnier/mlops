@@ -2,7 +2,6 @@ from flax import nnx
 
 
 class BasicBlock3(nnx.Module):
-
     """Basic CNN block with batch norm."""
 
     def __init__(
@@ -49,6 +48,6 @@ class BasicBlock3(nnx.Module):
             (tensor): Output shape of shape [N, H', W', features].
 
         """
-        return nnx.relu(self.batch_norm(self.convolution_layer(x), use_running_average=train))
-
-
+        return nnx.relu(
+            self.batch_norm(self.convolution_layer(x), use_running_average=train)
+        )

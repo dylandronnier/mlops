@@ -6,7 +6,6 @@ from models._basic_cnn_block import BasicBlock3
 
 
 class ResBlock(nnx.Module):
-
     """Residual Block."""
 
     def __init__(
@@ -16,7 +15,7 @@ class ResBlock(nnx.Module):
         *,
         rngs: nnx.Rngs,
     ) -> None:
-        """Construct a Residual Block
+        """Construct a Residual Block.
 
         Args:
         ----
@@ -82,7 +81,6 @@ class ResBlock(nnx.Module):
 
 
 class Resnet9(nnx.Module):
-
     """Resnet9 is a Residual Neural Network composed of ."""
 
     def __init__(self, num_classes: int, *, rngs: nnx.Rngs) -> None:

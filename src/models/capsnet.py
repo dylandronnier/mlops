@@ -12,7 +12,7 @@ def squash(x: ArrayLike):
 
 
 class PrimaryCapsules(nnx.Module):
-    """Primary Capsule."""
+    """Primary Capsule Block."""
 
     def __init__(
         self,

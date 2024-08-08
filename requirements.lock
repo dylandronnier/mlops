@@ -40,7 +40,7 @@ attrs==23.2.0
     # via referencing
 blinker==1.8.2
     # via flask
-cachetools==5.3.3
+cachetools==5.4.0
     # via mlflow
 certifi==2024.7.4
     # via httpcore
@@ -83,7 +83,7 @@ entrypoints==0.4
 etils==1.9.2
     # via optax
     # via orbax-checkpoint
-fastapi==0.111.0
+fastapi==0.111.1
     # via gradio
 fastapi-cli==0.0.4
     # via fastapi
@@ -136,7 +136,7 @@ httpx==0.27.0
     # via fastapi
     # via gradio
     # via gradio-client
-huggingface-hub==0.23.4
+huggingface-hub==0.24.0
     # via datasets
     # via gradio
     # via gradio-client
@@ -249,10 +249,9 @@ optuna==3.6.1
     # via optuna-integration
 optuna-integration==3.6.0
     # via mlops
-orbax-checkpoint==0.5.20
+orbax-checkpoint==0.5.22
     # via flax
 orjson==3.10.6
-    # via fastapi
     # via gradio
 packaging==24.1
     # via altair
@@ -330,7 +329,7 @@ rich==13.7.1
 rpds-py==0.19.0
     # via jsonschema
     # via referencing
-ruff==0.5.1
+ruff==0.5.3
     # via gradio
 scikit-learn==1.5.1
     # via mlflow
@@ -341,7 +340,7 @@ scipy==1.14.0
     # via scikit-learn
 semantic-version==2.10.0
     # via gradio
-setuptools==70.3.0
+setuptools==71.0.3
     # via chex
     # via opentelemetry-api
     # via opentelemetry-sdk
@@ -361,7 +360,7 @@ sqlalchemy==2.0.31
     # via alembic
     # via mlflow
     # via optuna
-sqlparse==0.5.0
+sqlparse==0.5.1
     # via mlflow
 starlette==0.37.2
     # via fastapi
@@ -404,8 +403,6 @@ tyro==0.8.5
     # via mlops
 tzdata==2024.1
     # via pandas
-ujson==5.10.0
-    # via fastapi
 urllib3==2.2.2
     # via docker
     # via gradio

@@ -6,6 +6,8 @@ import tyro
 from datasets import DatasetDict, load_dataset
 from flax import nnx
 from models import VisionTransformer
+from models.densenet import DenseNet
+from models.mlp_mixer import MlpMixer
 from models.resnet import Resnet9
 from train import TrainingConfig, train_and_evaluate
 
@@ -15,9 +17,12 @@ def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
     example["image"] = example["img"] / 255
     return example
 
+
 class Model(enum.Enum):
     ViT = enum.auto()
     ResNet = enum.auto()
+    MlpMixer = enum.auto()
+    DenseNet = enum.auto()
 
 
 @tyro.cli
@@ -50,7 +55,7 @@ def main(training_config: TrainingConfig, model: Model, seed: int = 42) -> None:
 
     if model == Model.ResNet:
         mod = Resnet9(num_classes=10, rngs=nnx.Rngs(seed))
-    else:
+    elif model == Model.ViT:
         mod = VisionTransformer(
             embed_dim=256,
             mlp_dim=512,
@@ -64,5 +69,19 @@ def main(training_config: TrainingConfig, model: Model, seed: int = 42) -> None:
             rngs=nnx.Rngs(seed),
         )
 
+    elif model == Model.MlpMixer:
+        mod = MlpMixer(
+            image_size=32,
+            channels=3,
+            num_classes=10,
+            embed_dim=128,
+            num_blocks=4,
+            token_mlp_dim=16,
+            channels_mlp_dim=128,
+            patches_size=8,
+            rngs=nnx.Rngs(seed),
+        )
+    elif model == Model.DenseNet:
+        mod = DenseNet(rngs=nnx.Rngs(seed))
 
     train_and_evaluate(mod, rescaled_dataset, training_config)

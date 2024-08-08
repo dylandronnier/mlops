@@ -76,9 +76,7 @@ class ImageFlow(nnx.Module):
 
 
 class Dequantization(nn.Module):
-    alpha: float = (
-        1e-5  # Small constant that is used to scale the original input for numerical stability.
-    )
+    alpha: float = 1e-5  # Small constant that is used to scale the original input for numerical stability.
     quants: int = (
         256  # Number of possible discrete values (usually 256 for 8-bit image)
     )

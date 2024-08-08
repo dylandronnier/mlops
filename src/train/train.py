@@ -17,7 +17,6 @@ from train.steps import eval_step, pred_step, train_step
 
 @dataclass
 class TrainingConfig:
-
     """Class that."""
 
     # Number of epochs
@@ -63,7 +62,6 @@ def train_and_evaluate(
     )
 
     for epoch in range(1, config.epochs_number + 1):
-
         for batch in tqdm(
             dataset["train"].iter(batch_size=config.batch_size, drop_last_batch=True),
             desc="Training",
@@ -73,7 +71,9 @@ def train_and_evaluate(
 
         # Log training metrics
         for metric, value in metrics.compute().items():  # compute metrics
-            mlflow.log_metric(key=f"train_{metric}", value=float(value), step=epoch)  # record metrics
+            mlflow.log_metric(
+                key=f"train_{metric}", value=float(value), step=epoch
+            )  # record metrics
             metrics.reset()  # reset metrics for test set
 
         for batch in tqdm(

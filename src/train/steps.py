@@ -30,5 +30,5 @@ def eval_step(model: nnx.Module, metrics: nnx.MultiMetric, batch):
 
 @nnx.jit
 def pred_step(model, batch):
-    logits = model(batch["image"])
+    logits = model(batch["image"], train=False)
     return logits.argmax(axis=1)
