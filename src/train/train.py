@@ -107,7 +107,7 @@ def train_and_evaluate(
     mlflow.pyfunc.log_model(
         artifact_path="trained_model",
         python_model=FlaxModel(*nnx.split(model)),
-        input_example=np.array(images["image"]),
+        input_example=np.array(images["image"]),  # TO CHANGE
         # registered_model_name="cnn",
     )
     return early_stop.best_metric
