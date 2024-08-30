@@ -21,6 +21,9 @@ def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
 
 @dataclass
 class Config:
+
+    """Configuration of the experiment."""
+
     training_hp: TrainingConfig = MISSING
     model: ConfigModel = MISSING
     hf_dataset: str = "uoft-cs/cifar10"
@@ -39,19 +42,14 @@ def main(conf: Config) -> None:
     """Train a VisionTransformer on the CIFAR10 dataset.
 
     Args:
-      training_config: Hyperparameters of the training.
-      model: Model architecture.
-      seed: Seed of the experiment.
+        conf(Config): Configuration of the experiment.
 
     """
     # Load dataset
     dataset = load_dataset(
         path=conf.hf_dataset,
-        split={"train": "train[:5%]", "test": "test[:5%]"},
+        # split={"train": "train[:5%]", "test": "test[:5%]"},
     )
-
-    # Ensure the dataset is loaded as a JAX array
-    dataset = dataset.with_format("jax")
 
     # Ensure the datasets is a Dataset Dictionary
     if not (isinstance(dataset, DatasetDict)):

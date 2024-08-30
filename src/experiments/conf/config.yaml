@@ -1,6 +1,6 @@
 defaults:
   - base_config
   - training_hp: standard
-  - model: vit
+  - model: resnet18
   - _self_
 

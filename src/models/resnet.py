@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Sequence
 
 from flax import nnx
 from jax import Array
@@ -9,6 +8,7 @@ from models._basic_cnn_block import BasicBlock
 
 
 class _ResNetBlock(nnx.Module):
+
     """Residual Block."""
 
     def __init__(
@@ -102,11 +102,12 @@ class _ResNetBlock(nnx.Module):
 class Architecture:
     num_classes: int
     channels: int
-    stage_sizes: Sequence[int]
+    stage_sizes: list[int]
     num_filers: int = 64
 
 
 class NeuralNetwork(nnx.Module):
+
     """Residual Neural Network."""
 
     def __init__(self, arch: Architecture, *, rngs: nnx.Rngs) -> None:
