@@ -1,15 +1,16 @@
-import enum
+from dataclasses import dataclass
 from typing import Any
 
+# import tyro
+import hydra
 import mlflow
-import tyro
 from datasets import DatasetDict, load_dataset
 from flax import nnx
-from models import VisionTransformer
-from models.densenet import DenseNet
-from models.mlp_mixer import MlpMixer
-from models.resnet import Resnet9
-from train import TrainingConfig, train_and_evaluate
+from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING, OmegaConf, SCMode
+from train import train_and_evaluate
+from train.train import TrainingConfig
+from utils.confmodel import ConfigModel, store_model_config
 
 
 def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
@@ -18,15 +19,23 @@ def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
     return example
 
 
-class Model(enum.Enum):
-    ViT = enum.auto()
-    ResNet = enum.auto()
-    MlpMixer = enum.auto()
-    DenseNet = enum.auto()
+@dataclass
+class Config:
+    training_hp: TrainingConfig = MISSING
+    model: ConfigModel = MISSING
+    hf_dataset: str = "uoft-cs/cifar10"
+    seed: int = 42
 
 
-@tyro.cli
-def main(training_config: TrainingConfig, model: Model, seed: int = 42) -> None:
+cs = ConfigStore.instance()
+cs.store(name="base_config", node=Config)
+cs.store(group="training_hp", name="base_trainingconfig", node=TrainingConfig)
+for module in ["visiontransformer", "densenet", "resnet"]:
+    store_model_config(cs=cs, module="models." + module)
+
+
+@hydra.main(version_base=None, config_path="conf", config_name="config")
+def main(conf: Config) -> None:
     """Train a VisionTransformer on the CIFAR10 dataset.
 
     Args:
@@ -37,10 +46,11 @@ def main(training_config: TrainingConfig, model: Model, seed: int = 42) -> None:
     """
     # Load dataset
     dataset = load_dataset(
-        path="uoft-cs/cifar10",
+        path=conf.hf_dataset,
         split={"train": "train[:5%]", "test": "test[:5%]"},
     )
 
+    # Ensure the dataset is loaded as a JAX array
     dataset = dataset.with_format("jax")
 
     # Ensure the datasets is a Dataset Dictionary
@@ -53,35 +63,19 @@ def main(training_config: TrainingConfig, model: Model, seed: int = 42) -> None:
     # Enable system metrics logging by mlflow
     mlflow.enable_system_metrics_logging()
 
-    if model == Model.ResNet:
-        mod = Resnet9(num_classes=10, rngs=nnx.Rngs(seed))
-    elif model == Model.ViT:
-        mod = VisionTransformer(
-            embed_dim=256,
-            mlp_dim=512,
-            num_heads=8,
-            layers=6,
-            patches_size=4,
-            num_patches=64,
-            num_classes=10,
-            dropout_rate=0.2,
-            attendion_dropout_rate=0.2,
-            rngs=nnx.Rngs(seed),
-        )
+    # Initialize the model
+    dc_model = OmegaConf.to_container(
+        cfg=conf.model, structured_config_mode=SCMode.INSTANTIATE, resolve=True
+    )
+    mod = dc_model.to_model(rngs=nnx.Rngs(conf.seed))
 
-    elif model == Model.MlpMixer:
-        mod = MlpMixer(
-            image_size=32,
-            channels=3,
-            num_classes=10,
-            embed_dim=128,
-            num_blocks=4,
-            token_mlp_dim=16,
-            channels_mlp_dim=128,
-            patches_size=8,
-            rngs=nnx.Rngs(seed),
-        )
-    elif model == Model.DenseNet:
-        mod = DenseNet(rngs=nnx.Rngs(seed))
+    # Train and evaluate
+    dc_training_hp = OmegaConf.to_container(
+        cfg=conf.training_hp, structured_config_mode=SCMode.INSTANTIATE, resolve=True
+    )
 
-    train_and_evaluate(mod, rescaled_dataset, training_config)
+    train_and_evaluate(mod, rescaled_dataset, dc_training_hp)
+
+
+if __name__ == "__main__":
+    main()

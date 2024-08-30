@@ -1,0 +1,13 @@
+defaults:
+  - base_visiontransformer
+
+num_classes: 10
+channels: 3
+patches_size: 4
+num_patches: 64
+embed_dim: 256
+layers: 6
+mlp_dim: 512
+num_heads: 8
+dropout_rate: 0.2
+attention_dropout_rate: 0.2

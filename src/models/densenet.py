@@ -1,11 +1,13 @@
+from dataclasses import dataclass
+
 import jax.numpy as jnp
 from flax import nnx
 from jax import Array
 
-from models._basic_cnn_block import BasicBlock3
+from models._basic_cnn_block import BasicBlock
 
 
-class DenseLayer(nnx.Module):
+class _DenseLayer(nnx.Module):
     def __init__(
         self,
         num_input_features: int,
@@ -46,7 +48,7 @@ class DenseLayer(nnx.Module):
         )
 
 
-class DenseBlock(nnx.Module):
+class _DenseBlock(nnx.Module):
     def __init__(
         self,
         num_layers: int,
@@ -59,7 +61,7 @@ class DenseBlock(nnx.Module):
         self.layers = list()
         for i in range(num_layers):
             self.layers.append(
-                DenseLayer(
+                _DenseLayer(
                     num_input_features=num_input_features + i * growth_rate,
                     growth_rate=growth_rate,
                     bn_size=bn_size,
@@ -75,7 +77,7 @@ class DenseBlock(nnx.Module):
         return jnp.concat(features, axis=-1)
 
 
-class Transition(nnx.Module):
+class _Transition(nnx.Module):
     def __init__(
         self, num_input_features: int, num_output_features: int, *, rngs: nnx.Rngs
     ) -> None:
@@ -97,7 +99,17 @@ class Transition(nnx.Module):
         )
 
 
-class DenseNet(nnx.Module):
+@dataclass
+class Architecture:
+    channels: int = 3
+    growth_rate: int = 12
+    block_config: tuple[int, int, int, int] = (3, 6, 12, 8)
+    num_init_features: int = 32
+    bn_size: int = 4
+    num_classes: int = 10
+
+
+class NeuralNetwork(nnx.Module):
     r"""Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_.
 
@@ -115,35 +127,31 @@ class DenseNet(nnx.Module):
 
     def __init__(
         self,
-        growth_rate: int = 12,
-        block_config: tuple[int, int, int, int] = (3, 6, 12, 8),
-        num_init_features: int = 32,
-        bn_size: int = 4,
-        num_classes: int = 10,
+        hp: Architecture,
         *,
         rngs: nnx.Rngs,
     ) -> None:
-        self.basic_cnn = BasicBlock3(
-            in_features=3, out_features=num_init_features, rngs=rngs
+        self.basic_cnn = BasicBlock(
+            in_features=hp.channels, out_features=hp.num_init_features, rngs=rngs
         )
 
         self.layers = list()
         # Each denseblock
-        num_features = num_init_features
-        for i, num_layers in enumerate(block_config):
+        num_features = hp.num_init_features
+        for i, num_layers in enumerate(hp.block_config):
             self.layers.append(
-                DenseBlock(
+                _DenseBlock(
                     num_layers=num_layers,
                     num_input_features=num_features,
-                    bn_size=bn_size,
-                    growth_rate=growth_rate,
+                    bn_size=hp.bn_size,
+                    growth_rate=hp.growth_rate,
                     rngs=rngs,
                 )
             )
-            num_features = num_features + num_layers * growth_rate
-            if i != len(block_config) - 1:
+            num_features = num_features + num_layers * hp.growth_rate
+            if i != len(hp.block_config) - 1:
                 self.layers.append(
-                    Transition(
+                    _Transition(
                         num_input_features=num_features,
                         num_output_features=num_features // 2,
                         rngs=rngs,
@@ -154,7 +162,7 @@ class DenseNet(nnx.Module):
         # Final batch norm
         self.layers.append(nnx.BatchNorm(num_features=num_features, rngs=rngs))
         self.head = nnx.Linear(
-            in_features=num_features, out_features=num_classes, rngs=rngs
+            in_features=num_features, out_features=hp.num_classes, rngs=rngs
         )
 
     def __call__(self, x: Array, train: bool) -> Array:

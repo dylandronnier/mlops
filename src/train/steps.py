@@ -4,7 +4,7 @@ from optax.losses import softmax_cross_entropy_with_integer_labels
 
 def loss_fn(model, batch, train: bool):
     """Cross entropy losss function."""
-    logits = model(batch["image"], train)
+    logits = model(batch["image"], train=train)
     loss = softmax_cross_entropy_with_integer_labels(
         logits=logits, labels=batch["label"]
     ).mean()

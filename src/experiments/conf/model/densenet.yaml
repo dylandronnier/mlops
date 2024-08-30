@@ -1,0 +1,9 @@
+defaults:
+  - base_densenet
+
+channels: 3
+growth_rate: 12
+block_config: [3, 6, 12, 8]
+num_init_features: 32
+bn_size: 4
+num_classes: 10

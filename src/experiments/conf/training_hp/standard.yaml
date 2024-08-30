@@ -1,0 +1,7 @@
+defaults:
+  - base_trainingconfig
+
+epochs_number: 3
+batch_size: 8
+learning_rate: 0.005
+momentum: 0.9

@@ -8,6 +8,7 @@ from flax import nnx
 from flax.training.early_stopping import EarlyStopping
 from jax import tree_leaves
 from matplotlib.pyplot import close
+from omegaconf import MISSING
 from optax import sgd
 from tqdm import tqdm
 from utils.utils import show_img_grid
@@ -17,26 +18,26 @@ from train.steps import eval_step, pred_step, train_step
 
 @dataclass
 class TrainingConfig:
-    """Class that."""
+    """Class that defines the parameters for the gradient descent."""
 
     # Number of epochs
-    epochs_number: int
+    epochs_number: int = MISSING
 
     # Batch size
-    batch_size: int
+    batch_size: int = MISSING
 
     # Learning rate
-    lr: float
+    learning_rate: float = MISSING
 
     # Momentum.
-    momentum: float
+    momentum: float = MISSING
 
 
 def train_and_evaluate(
-    model: nnx.Module, dataset: DatasetDict, config: TrainingConfig
+    model: nnx.Module, dataset: DatasetDict, training_config: TrainingConfig
 ) -> float:
     # Log configuration parameters
-    mlflow.log_params(asdict(config))
+    mlflow.log_params(asdict(training_config))
 
     # Log dataset
     # mlflow.log_input(
@@ -52,7 +53,9 @@ def train_and_evaluate(
 
     early_stop = EarlyStopping(patience=3, min_delta=1e-3)
 
-    optimizer = nnx.Optimizer(model, sgd(config.lr, config.momentum))
+    optimizer = nnx.Optimizer(
+        model, sgd(training_config.learning_rate, training_config.momentum)
+    )
     metrics = nnx.MultiMetric(
         accuracy=nnx.metrics.Accuracy(),
         loss=nnx.metrics.Average("loss"),
@@ -61,11 +64,14 @@ def train_and_evaluate(
         "nb_parameters", sum(p.size for p in tree_leaves(nnx.split(model)[1]))
     )
 
-    for epoch in range(1, config.epochs_number + 1):
+    for epoch in range(1, training_config.epochs_number + 1):
+        # Training loop
         for batch in tqdm(
-            dataset["train"].iter(batch_size=config.batch_size, drop_last_batch=True),
-            desc="Training",
-            total=len(dataset["train"]) // config.batch_size,
+            dataset["train"].iter(
+                batch_size=training_config.batch_size, drop_last_batch=True
+            ),
+            desc="Training...",
+            total=len(dataset["train"]) // training_config.batch_size,
         ):
             train_step(model=model, optimizer=optimizer, metrics=metrics, batch=batch)
 
@@ -74,21 +80,24 @@ def train_and_evaluate(
             mlflow.log_metric(
                 key=f"train_{metric}", value=float(value), step=epoch
             )  # record metrics
-            metrics.reset()  # reset metrics for test set
+        metrics.reset()  # reset metrics for test set
 
+        # Evaluation loop
         for batch in tqdm(
-            dataset["test"].iter(batch_size=config.batch_size, drop_last_batch=True),
-            desc="Evaluating:",
-            total=len(dataset["test"]) // config.batch_size,
+            dataset["test"].iter(
+                batch_size=training_config.batch_size, drop_last_batch=True
+            ),
+            desc="Evaluating...",
+            total=len(dataset["test"]) // training_config.batch_size,
         ):
             eval_step(model=model, metrics=metrics, batch=batch)
 
-            # Log test metrics
+        # Log test metrics
         for metric, value in metrics.compute().items():
             if metric == "loss":
                 early_stop = early_stop.update(value)
             mlflow.log_metric(key=f"test_{metric}", value=float(value), step=epoch)
-            metrics.reset()  # reset metrics for next training epoch
+        metrics.reset()  # reset metrics for next training epoch
 
         if early_stop.should_stop:
             print("Stopping due to no improvments")

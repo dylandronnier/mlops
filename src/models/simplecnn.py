@@ -1,17 +1,25 @@
+from dataclasses import dataclass
+
 from flax import nnx
 from jax import Array
 
-from models._basic_cnn_block import BasicBlock3
+from models._basic_cnn_block import BasicBlock
+
+
+@dataclass
+class Architecture:
+    num_classes: int
+    channels: int
 
 
 class CNN(nnx.Module):
     """A simple CNN model."""
 
-    def __init__(self, *, rngs: nnx.Rngs):
-        self.bb1 = BasicBlock3(in_features=1, out_features=32, rngs=rngs)
-        self.bb2 = BasicBlock3(in_features=32, out_features=64, rngs=rngs)
+    def __init__(self, arch: Architecture, *, rngs: nnx.Rngs):
+        self.bb1 = BasicBlock(in_features=arch.channels, out_features=32, rngs=rngs)
+        self.bb2 = BasicBlock(in_features=32, out_features=64, rngs=rngs)
         self.linear1 = nnx.Linear(3136, 256, rngs=rngs)
-        self.linear2 = nnx.Linear(256, 10, rngs=rngs)
+        self.linear2 = nnx.Linear(256, arch.num_classes, rngs=rngs)
 
     def __call__(self, x: Array, train: bool) -> Array:
         x = nnx.avg_pool(self.bb1(x, train), window_shape=(2, 2), strides=(2, 2))

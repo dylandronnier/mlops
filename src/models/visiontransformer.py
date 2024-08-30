@@ -1,8 +1,10 @@
+from dataclasses import dataclass
+
 import jax.numpy as jnp
 from flax import nnx
 
 
-class MlpBlock(nnx.Module):
+class _MlpBlock(nnx.Module):
     """Transformer MLP / feed-forward block."""
 
     def __init__(
@@ -39,7 +41,7 @@ class MlpBlock(nnx.Module):
         return x
 
 
-class AttentionBlock(nnx.Module):
+class _AttentionBlock(nnx.Module):
     """Attention block.
 
     Attributes
@@ -71,9 +73,10 @@ class AttentionBlock(nnx.Module):
             num_heads=num_heads,
             broadcast_dropout=False,
             dropout_rate=attention_dropout_rate,
+            decode=False,
             rngs=rngs,
         )
-        self.mlp = MlpBlock(
+        self.mlp = _MlpBlock(
             in_features=in_features,
             out_features=out_features,
             mlp_dim=mlp_dim,
@@ -108,54 +111,65 @@ class AttentionBlock(nnx.Module):
         return x + y
 
 
-class VisionTransformer(nnx.Module):
+@dataclass
+class Architecture:
+    num_classes: int
+    channels: int
+    patches_size: int
+    num_patches: int
+    embed_dim: int
+    layers: int
+    mlp_dim: int
+    num_heads: int
+    dropout_rate: float
+    attention_dropout_rate: float
+
+
+class NeuralNetwork(nnx.Module):
     """VisionTransformer."""
 
     def __init__(
         self,
-        num_classes: int,
-        patches_size: int,
-        num_patches: int,
-        embed_dim: int,
-        layers: int,
-        mlp_dim: int,
-        num_heads: int,
-        dropout_rate: float,
-        attendion_dropout_rate: float,
+        hp: Architecture,
         *,
         rngs: nnx.Rngs,
     ) -> None:
         self.pos_embedding = nnx.Param(
             nnx.initializers.normal(stddev=1.0)(
-                rngs.params(), shape=(1, 1 + num_patches, embed_dim)
+                rngs.params(),
+                shape=(1, 1 + hp.num_patches, hp.embed_dim),
             )
         )
         self.cls_token = nnx.Param(
-            nnx.initializers.normal(stddev=1.0)(rngs.params(), shape=(1, 1, embed_dim))
+            nnx.initializers.normal(stddev=1.0)(
+                rngs.params(), shape=(1, 1, hp.embed_dim)
+            )
         )
         self.patch_embedding = nnx.Conv(
             in_features=3,
-            out_features=embed_dim,
-            kernel_size=(patches_size, patches_size),
-            strides=patches_size,
+            out_features=hp.embed_dim,
+            kernel_size=(hp.patches_size, hp.patches_size),
+            strides=hp.patches_size,
             padding="VALID",
             rngs=rngs,
         )
         self.transformer_layers = []
-        for _ in range(layers):
+        for _ in range(hp.layers):
             self.transformer_layers.append(
-                AttentionBlock(
-                    in_features=embed_dim,
-                    out_features=embed_dim,
-                    mlp_dim=mlp_dim,
-                    num_heads=num_heads,
-                    dropout_rate=dropout_rate,
-                    attention_dropout_rate=attendion_dropout_rate,
+                _AttentionBlock(
+                    in_features=hp.embed_dim,
+                    out_features=hp.embed_dim,
+                    mlp_dim=hp.mlp_dim,
+                    num_heads=hp.num_heads,
+                    dropout_rate=hp.dropout_rate,
+                    attention_dropout_rate=hp.attention_dropout_rate,
                     rngs=rngs,
                 )
             )
         self.final_layer = nnx.Linear(
-            in_features=patches_size, out_features=num_classes, rngs=rngs
+            in_features=hp.embed_dim,
+            out_features=hp.num_classes,
+            rngs=rngs,
         )
 
     def __call__(self, inputs, *, train: bool):
@@ -165,7 +179,7 @@ class VisionTransformer(nnx.Module):
         x = jnp.reshape(x, [n, h * w, c])
 
         # Add CLS token and positional encoding
-        cls_token = self.cls_token.repeat(n, axis=0)
+        cls_token = jnp.repeat(self.cls_token.value, n, axis=0)
         x = jnp.concatenate([cls_token, x], axis=1)
         x = x + self.pos_embedding[:, : h * w + 1]
 

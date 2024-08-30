@@ -12,3 +12,4 @@ wheels/
 mlruns/
 *.csv
 *.png
+outputs/

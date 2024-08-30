@@ -1,13 +1,14 @@
 from flax import nnx
 
 
-class BasicBlock3(nnx.Module):
+class BasicBlock(nnx.Module):
     """Basic CNN block with batch norm."""
 
     def __init__(
         self,
         in_features: int,
         out_features: int,
+        kernel_size: tuple[int, int],
         *,
         rngs: nnx.Rngs,
     ) -> None:
@@ -17,6 +18,7 @@ class BasicBlock3(nnx.Module):
         ----
             in_features (int): Number of input channels.
             out_features (int): Number of output channels.
+            kernel_size (int, int): Size of the kernel.
             rngs: Key for the random initialization of the paramters.
 
         """
@@ -24,7 +26,7 @@ class BasicBlock3(nnx.Module):
         self.convolution_layer = nnx.Conv(
             in_features=in_features,
             out_features=out_features,
-            kernel_size=(3, 3),
+            kernel_size=kernel_size,
             strides=(1, 1),
             padding=((1, 1), (1, 1)),
             use_bias=False,

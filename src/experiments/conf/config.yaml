@@ -1,0 +1,6 @@
+defaults:
+  - base_config
+  - training_hp: standard
+  - model: vit
+  - _self_
+
