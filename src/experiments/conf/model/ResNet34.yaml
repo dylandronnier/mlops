@@ -1,0 +1,7 @@
+# Architecture of ResNet34
+defaults:
+  - base_resnet
+
+channels: 3
+stage_sizes: [3, 4, 6, 3]
+num_classes: 10

@@ -7,7 +7,7 @@ from jax.numpy import mean
 from models._basic_cnn_block import BasicBlock
 
 
-class _ResNetBlock(nnx.Module):
+class _ConvNeXTBlock(nnx.Module):
     """Residual Block."""
 
     def __init__(
@@ -30,33 +30,32 @@ class _ResNetBlock(nnx.Module):
         self.conv1 = nnx.Conv(
             in_features=in_features,
             out_features=out_features,
-            kernel_size=(3, 3),
+            kernel_size=(7, 7),
             strides=(1, 1),
             padding=((1, 1), (1, 1)),
             use_bias=False,
             rngs=rngs,
         )
 
-        self.bn1 = nnx.BatchNorm(
-            epsilon=1e-5, momentum=0.9, num_features=out_features, rngs=rngs
-        )
+        self.ln = nnx.LayerNorm(epsilon=1e-5, num_features=out_features, rngs=rngs)
 
         self.conv2 = nnx.Conv(
             in_features=out_features,
             out_features=out_features,
-            kernel_size=(3, 3),
+            kernel_size=(1, 1),
             strides=strides,
             padding=((1, 1), (1, 1)),
             use_bias=False,
             rngs=rngs,
         )
-
-        self.bn2 = nnx.BatchNorm(
-            epsilon=1e-5,
-            momentum=0.9,
-            num_features=out_features,
+        self.conv3 = nnx.Conv(
+            in_features=out_features,
+            out_features=out_features,
+            kernel_size=(1, 1),
+            strides=strides,
+            padding=((1, 1), (1, 1)),
+            use_bias=False,
             rngs=rngs,
-            scale_init=nnx.initializers.zeros_init(),
         )
 
         if in_features != out_features or strides != (1, 1):
@@ -87,9 +86,9 @@ class _ResNetBlock(nnx.Module):
             (tensor): Output shape of shape [N, H', W', features].
 
         """
-        out = nnx.relu(self.bn1(self.conv1(x), use_running_average=train))
+        out = self.conv3(nnx.gelu(self.conv2(self.ln(self.conv1(x)))))
 
-        out = nnx.relu(self.bn2(self.conv2(out), use_running_average=train))
+        # out = nnx.relu(self.bn2(self.conv2(out), use_running_average=train))
 
         if x.shape != out.shape:
             x = self.proj_norm(self.proj(x))

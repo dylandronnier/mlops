@@ -146,7 +146,7 @@ class NeuralNetwork(nnx.Module):
             )
         )
         self.patch_embedding = nnx.Conv(
-            in_features=3,
+            in_features=hp.channels,
             out_features=hp.embed_dim,
             kernel_size=(hp.patches_size, hp.patches_size),
             strides=hp.patches_size,
