@@ -1114,6 +1114,7 @@ dependencies = [
 [package.optional-dependencies]
 cuda = [
     { name = "jax", extra = ["cuda12"] },
+    { name = "pynvml" },
 ]
 
 [package.metadata]
@@ -1130,6 +1131,7 @@ requires-dist = [
     { name = "optuna", specifier = ">=3.5.0" },
     { name = "optuna-integration", specifier = ">=3.6.0" },
     { name = "psutil", specifier = ">=5.9.8" },
+    { name = "pynvml", marker = "extra == 'cuda'", specifier = ">=11.5.3" },
     { name = "tornado", specifier = ">=6.4" },
     { name = "tyro", specifier = ">=0.8.4" },
 ]
@@ -1700,6 +1702,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8e/62/8336eff65bcbc8e4cb5d05b55faf041285951b6e80f33e2bff2024788f31/pygments-2.18.0.tar.gz", hash = "sha256:786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199", size = 4891905 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/3f/01c8b82017c199075f8f788d0d906b9ffbbc5a47dc9918a945e13d5a2bda/pygments-2.18.0-py3-none-any.whl", hash = "sha256:b8e6aca0523f3ab76fee51799c488e38782ac06eafcf95e7ba832985c8e7b13a", size = 1205513 },
+]
+
+[[package]]
+name = "pynvml"
+version = "11.5.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/e9/9931792cb776716363fc7c3039b477d11278173d71ddc230eb9b5f4ce93f/pynvml-11.5.3.tar.gz", hash = "sha256:183d223ae487e5f00402d8da06c68c978ef8a9295793ee75559839c6ade7b229", size = 73685 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/5b/16e50abf152be7f18120f11dfff495014a9eaff7b764626e1656f04ad262/pynvml-11.5.3-py3-none-any.whl", hash = "sha256:a5fba3ab14febda50d19dbda012ef62ae0aed45b7ccc07af0bc5be79223e450c", size = 53135 },
 ]
 
 [[package]]

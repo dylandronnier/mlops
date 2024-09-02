@@ -2,7 +2,6 @@ from dataclasses import asdict, dataclass
 
 import mlflow
 import numpy as np
-from datasets import DatasetDict
 from deploy.serve import FlaxModel
 from flax import nnx
 from flax.training.early_stopping import EarlyStopping
@@ -11,6 +10,7 @@ from matplotlib.pyplot import close
 from omegaconf import MISSING
 from optax import sgd
 from tqdm import tqdm
+from utils.dataloader import DataLoader
 from utils.utils import show_img_grid
 
 from train.steps import eval_step, pred_step, train_step
@@ -18,6 +18,7 @@ from train.steps import eval_step, pred_step, train_step
 
 @dataclass
 class TrainingConfig:
+
     """Class that defines the parameters for the gradient descent."""
 
     # Number of epochs
@@ -34,23 +35,15 @@ class TrainingConfig:
 
 
 def train_and_evaluate(
-    model: nnx.Module, dataset: DatasetDict, training_config: TrainingConfig
+    model: nnx.Module,
+    dataset_train: DataLoader,
+    dataset_test: DataLoader,
+    training_config: TrainingConfig,
 ) -> float:
     # Log configuration parameters
     mlflow.log_params(asdict(training_config))
 
-    # Log dataset
-    # mlflow.log_input(
-    #     from_huggingface(dataset["train"]),
-    #     context="training",
-    # )
-    # mlflow.log_input(
-    #     from_huggingface(dataset["test"], "test"),
-    #     context="validation",
-    # )
-
     # Init the training state
-
     early_stop = EarlyStopping(patience=3, min_delta=1e-3)
 
     optimizer = nnx.Optimizer(
@@ -67,11 +60,9 @@ def train_and_evaluate(
     for epoch in range(1, training_config.epochs_number + 1):
         # Training loop
         for batch in tqdm(
-            dataset["train"].iter(
-                batch_size=training_config.batch_size, drop_last_batch=True
-            ),
-            desc="Training...",
-            total=len(dataset["train"]) // training_config.batch_size,
+            dataset_train,
+            desc="Training",
+            total=len(dataset_train),
         ):
             train_step(model=model, optimizer=optimizer, metrics=metrics, batch=batch)
 
@@ -84,11 +75,9 @@ def train_and_evaluate(
 
         # Evaluation loop
         for batch in tqdm(
-            dataset["test"].iter(
-                batch_size=training_config.batch_size, drop_last_batch=True
-            ),
-            desc="Evaluating...",
-            total=len(dataset["test"]) // training_config.batch_size,
+            dataset_test,
+            desc="Evaluating",
+            total=len(dataset_test),
         ):
             eval_step(model=model, metrics=metrics, batch=batch)
 
@@ -104,7 +93,7 @@ def train_and_evaluate(
             break
 
     # Inference testing of the model
-    images = next(dataset["test"].iter(batch_size=9))
+    images = next(dataset_test)[:9]
     fig = show_img_grid(images["image"], pred_step(model, images))
     mlflow.log_figure(
         figure=fig,

@@ -11,16 +11,20 @@ from omegaconf import MISSING, OmegaConf, SCMode
 from train import train_and_evaluate
 from train.train import TrainingConfig
 from utils.confmodel import ConfigModel, store_model_config
+from utils.dataloader import DataLoader
 
 
 def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
     """Normalize the image dataset."""
-    example["image"] = example["img"] / 255
+    example["image"] = example["image"] / 255
     return example
 
 
 @dataclass
 class Config:
+
+    """Configuration of the experiment."""
+
     training_hp: TrainingConfig = MISSING
     model: ConfigModel = MISSING
     hf_dataset: str = "uoft-cs/cifar10"
@@ -39,26 +43,40 @@ def main(conf: Config) -> None:
     """Train a VisionTransformer on the CIFAR10 dataset.
 
     Args:
-      training_config: Hyperparameters of the training.
-      model: Model architecture.
-      seed: Seed of the experiment.
+        conf(Config): Configuration of the experiment.
 
     """
     # Load dataset
-    dataset = load_dataset(
+    hf_dataset = load_dataset(
         path=conf.hf_dataset,
-        split={"train": "train[:5%]", "test": "test[:5%]"},
-    )
-
-    # Ensure the dataset is loaded as a JAX array
-    dataset = dataset.with_format("jax")
+        # split={"train": "train[:5%]", "test": "test[:5%]"},
+    ).rename_column("img", "image")
 
     # Ensure the datasets is a Dataset Dictionary
-    if not (isinstance(dataset, DatasetDict)):
+    if not (isinstance(hf_dataset, DatasetDict)):
         raise TypeError
 
     # Preprocess the data
-    rescaled_dataset = dataset.map(preprocessing)
+    # rescaled_dataset = hf_dataset.map(preprocessing)
+
+    dataloader_train = DataLoader(
+        hf_dataset["train"],
+        batch_size=conf.training_hp.batch_size,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    dataloader_train.map(preprocessing)
+
+    #
+    dataloader_test = DataLoader(
+        hf_dataset["test"],
+        batch_size=conf.training_hp.batch_size,
+        shuffle=True,
+        drop_last=True,
+    )
+
+    dataloader_test.map(preprocessing)
 
     # Enable system metrics logging by mlflow
     mlflow.enable_system_metrics_logging()
@@ -74,7 +92,7 @@ def main(conf: Config) -> None:
         cfg=conf.training_hp, structured_config_mode=SCMode.INSTANTIATE, resolve=True
     )
 
-    train_and_evaluate(mod, rescaled_dataset, dc_training_hp)
+    train_and_evaluate(mod, dataloader_train, dataloader_test, dc_training_hp)
 
 
 if __name__ == "__main__":

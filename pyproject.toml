@@ -30,6 +30,7 @@ vit = 'experiments.vit:main'
 [project.optional-dependencies]
 cuda = [
     "jax[cuda12]>=0.4.31",
+    "pynvml>=11.5.3",
 ]
 
 [build-system]

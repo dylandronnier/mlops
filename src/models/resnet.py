@@ -8,6 +8,7 @@ from models._basic_cnn_block import BasicBlock
 
 
 class _ResNetBlock(nnx.Module):
+
     """Residual Block."""
 
     def __init__(
@@ -106,6 +107,7 @@ class Architecture:
 
 
 class NeuralNetwork(nnx.Module):
+
     """Residual Neural Network."""
 
     def __init__(self, arch: Architecture, *, rngs: nnx.Rngs) -> None:

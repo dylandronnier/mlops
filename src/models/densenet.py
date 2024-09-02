@@ -110,6 +110,7 @@ class Architecture:
 
 
 class NeuralNetwork(nnx.Module):
+
     r"""Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_.
 
@@ -132,7 +133,10 @@ class NeuralNetwork(nnx.Module):
         rngs: nnx.Rngs,
     ) -> None:
         self.basic_cnn = BasicBlock(
-            in_features=hp.channels, out_features=hp.num_init_features, rngs=rngs
+            in_features=hp.channels,
+            out_features=hp.num_init_features,
+            kernel_size=(3, 3),
+            rngs=rngs,
         )
 
         self.layers = list()
