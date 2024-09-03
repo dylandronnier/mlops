@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Any
 
-# import tyro
 import hydra
 import mlflow
 from datasets import DatasetDict, load_dataset
 from flax import nnx
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf, SCMode
+
 from train import train_and_evaluate
 from train.train import TrainingConfig
 from utils.confmodel import ConfigModel, store_model_config
@@ -22,7 +22,6 @@ def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
 
 @dataclass
 class Config:
-
     """Configuration of the experiment."""
 
     training_hp: TrainingConfig = MISSING
@@ -68,7 +67,6 @@ def main(conf: Config) -> None:
 
     dataloader_train.map(preprocessing)
 
-    #
     dataloader_test = DataLoader(
         hf_dataset["test"],
         batch_size=conf.training_hp.batch_size,

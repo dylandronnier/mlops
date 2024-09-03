@@ -1,8 +1,8 @@
+import logging
 from dataclasses import asdict, dataclass
 
 import mlflow
 import numpy as np
-from deploy.serve import FlaxModel
 from flax import nnx
 from flax.training.early_stopping import EarlyStopping
 from jax import tree_leaves
@@ -10,15 +10,15 @@ from matplotlib.pyplot import close
 from omegaconf import MISSING
 from optax import sgd
 from tqdm import tqdm
+
+from deploy.serve import FlaxModel
+from train.steps import eval_step, pred_step, train_step
 from utils.dataloader import DataLoader
 from utils.utils import show_img_grid
-
-from train.steps import eval_step, pred_step, train_step
 
 
 @dataclass
 class TrainingConfig:
-
     """Class that defines the parameters for the gradient descent."""
 
     # Number of epochs
@@ -68,6 +68,7 @@ def train_and_evaluate(
 
         # Log training metrics
         for metric, value in metrics.compute().items():  # compute metrics
+            logging.info(f"Train {metric} = {value}")
             mlflow.log_metric(
                 key=f"train_{metric}", value=float(value), step=epoch
             )  # record metrics
@@ -83,13 +84,14 @@ def train_and_evaluate(
 
         # Log test metrics
         for metric, value in metrics.compute().items():
+            logging.info(f"Evaluation {metric} = {value}")
             if metric == "loss":
                 early_stop = early_stop.update(value)
             mlflow.log_metric(key=f"test_{metric}", value=float(value), step=epoch)
         metrics.reset()  # reset metrics for next training epoch
 
         if early_stop.should_stop:
-            print("Stopping due to no improvments")
+            logging.info("Stopping due to no improvments of the evaluation loss.")
             break
 
     # Inference testing of the model
