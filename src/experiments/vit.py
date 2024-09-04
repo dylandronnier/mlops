@@ -1,24 +1,36 @@
 from dataclasses import dataclass
-from typing import Any
+from functools import partial
 
+import augmax
 import hydra
+import jax.numpy as jnp
+import jax.random as jrand
 import mlflow
 from datasets import Array3D, DatasetDict, load_dataset
 from flax import nnx
 from hydra.core.config_store import ConfigStore
+from jax import jit
 from omegaconf import MISSING, OmegaConf, SCMode
 
 from train import train_and_evaluate
 from train.train import TrainingConfig
 from utils.confmodel import ConfigModel, store_model_config
 
-# from utils.dataloader import DataLoader
+# train_transforms = A.Compose(
+#     [
+#         A.HorizontalFlip(p=0.5),
+#         A.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)),
+#     ]
+# )
 
-
-def preprocessing(example: dict[str, Any]) -> dict[str, Any]:
-    """Normalize the image dataset."""
-    example["image"] = example["image"] / 255.0
-    return example
+mean = jnp.array([0.4914, 0.4822, 0.4465])
+std = jnp.array([0.203, 0.1994, 0.2010])
+pre_transform = augmax.Chain(
+    augmax.ByteToFloat(),
+    augmax.Normalize(mean=mean, std=std),
+)
+key = jrand.PRNGKey(0)
+transform = jit(partial(pre_transform, rng=key))
 
 
 @dataclass
@@ -27,7 +39,7 @@ class Config:
 
     training_hp: TrainingConfig = MISSING
     model: ConfigModel = MISSING
-    hf_dataset: str = "uoft-cs/cifar10"
+    hf_dataset: str = "cifar10"
     seed: int = 42
 
 
@@ -56,8 +68,15 @@ def app(conf: Config) -> None:
         raise TypeError
 
     # Preprocess the data
+
+    # transform = jit(partial(augmax.ByteToFloat().pixelwise, rng=key))
     hf_dataset = hf_dataset.with_format("jax")
-    hf_dataset = hf_dataset.map(preprocessing)
+    hf_dataset = hf_dataset.map(
+        lambda ex: {"image": transform(inputs=ex["image"])},
+        batched=True,
+        batch_size=16,
+    )
+    # hf_dataset = hf_dataset.map(preprocessing)
     hf_dataset = hf_dataset.cast_column(
         "image", feature=Array3D(shape=(32, 32, 3), dtype="float32")
     )

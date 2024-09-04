@@ -57,6 +57,7 @@ def train_and_evaluate(
     )
 
     for epoch in range(1, training_config.epochs_number + 1):
+        dataset = dataset.shuffle(keep_in_memory=True)
         # Training loop
         for batch in tqdm(
             dataset["train"].iter(
