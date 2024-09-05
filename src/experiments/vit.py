@@ -1,10 +1,10 @@
-from dataclasses import dataclass
+import logging
+from dataclasses import asdict, dataclass
 from functools import partial
 
 import augmax
 import hydra
 import jax.numpy as jnp
-import jax.random as jrand
 import mlflow
 from datasets import Array3D, DatasetDict, load_dataset
 from flax import nnx
@@ -15,22 +15,15 @@ from omegaconf import MISSING, OmegaConf, SCMode
 from train import train_and_evaluate
 from train.train import TrainingConfig
 from utils.confmodel import ConfigModel, store_model_config
-
-# train_transforms = A.Compose(
-#     [
-#         A.HorizontalFlip(p=0.5),
-#         A.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)),
-#     ]
-# )
+from utils.networks import number_of_parameters
 
 mean = jnp.array([0.4914, 0.4822, 0.4465])
 std = jnp.array([0.203, 0.1994, 0.2010])
-pre_transform = augmax.Chain(
+transform = augmax.Chain(
     augmax.ByteToFloat(),
     augmax.Normalize(mean=mean, std=std),
 )
-key = jrand.PRNGKey(0)
-transform = jit(partial(pre_transform, rng=key))
+jit_transform = jit(partial(transform, rng=jnp.array(0)))
 
 
 @dataclass
@@ -39,7 +32,7 @@ class Config:
 
     training_hp: TrainingConfig = MISSING
     model: ConfigModel = MISSING
-    hf_dataset: str = "cifar10"
+    hf_id: str = "cifar10"
     seed: int = 42
 
 
@@ -60,7 +53,7 @@ def app(conf: Config) -> None:
     """
     # Load dataset
     hf_dataset = load_dataset(
-        path=conf.hf_dataset,
+        path=conf.hf_id,
     ).rename_column("img", "image")
 
     # Ensure the datasets is a Dataset Dictionary
@@ -68,17 +61,19 @@ def app(conf: Config) -> None:
         raise TypeError
 
     # Preprocess the data
-
-    # transform = jit(partial(augmax.ByteToFloat().pixelwise, rng=key))
     hf_dataset = hf_dataset.with_format("jax")
     hf_dataset = hf_dataset.map(
-        lambda ex: {"image": transform(inputs=ex["image"])},
+        lambda ex: {"image": jit_transform(inputs=ex["image"])},
         batched=True,
         batch_size=16,
     )
-    # hf_dataset = hf_dataset.map(preprocessing)
     hf_dataset = hf_dataset.cast_column(
         "image", feature=Array3D(shape=(32, 32, 3), dtype="float32")
+    )
+
+    logging.info(
+        msg=f"The dataset {conf.hf_id} has been preprocessed. "
+        + "It is ready for the learning task."
     )
 
     # Enable system metrics logging by mlflow
@@ -89,13 +84,33 @@ def app(conf: Config) -> None:
         cfg=conf.model, structured_config_mode=SCMode.INSTANTIATE, resolve=True
     )
     mod = dc_model.to_model(rngs=nnx.Rngs(conf.seed))
+    mlflow.log_param("nb_parameters", number_of_parameters(mod))
 
     # Train and evaluate
     dc_training_hp = OmegaConf.to_container(
         cfg=conf.training_hp, structured_config_mode=SCMode.INSTANTIATE, resolve=True
     )
+    # Log configuration parameters
+    mlflow.log_params(asdict(dc_training_hp))
 
-    train_and_evaluate(mod, hf_dataset, dc_training_hp)
+    mod = train_and_evaluate(mod, hf_dataset, dc_training_hp)
+
+    # Inference testing of the model
+    batch = next(dataset["test"].iter(batch_size=10))
+    fig = show_img_grid(batch["image"], pred_step(mod, batch))
+    mlflow.log_figure(
+        figure=fig,
+        artifact_file="inference.pdf",
+    )
+    close(fig)
+
+    # Logging the model
+    mlflow.pyfunc.log_model(
+        artifact_path="trained_model",
+        python_model=FlaxModel(*nnx.split(model)),
+        input_example=np.array(batch["image"]),  # TO CHANGE
+        # registered_model_name="cnn",
+    )
 
 
 if __name__ == "__main__":

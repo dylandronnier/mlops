@@ -1,20 +1,15 @@
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 import mlflow
-import numpy as np
 from datasets import DatasetDict
 from flax import nnx
 from flax.training.early_stopping import EarlyStopping
-from jax import tree_leaves
-from matplotlib.pyplot import close
 from omegaconf import MISSING
 from optax import sgd
 from tqdm import tqdm
 
-from deploy.serve import FlaxModel
-from train.steps import eval_step, pred_step, train_step
-from utils.utils import show_img_grid
+from train.steps import eval_step, train_step
 
 
 @dataclass
@@ -22,7 +17,7 @@ class TrainingConfig:
     """Class that defines the parameters for the gradient descent."""
 
     # Number of epochs
-    epochs_number: int = MISSING
+    epochs: int = MISSING
 
     # Batch size
     batch_size: int = MISSING
@@ -38,10 +33,7 @@ def train_and_evaluate(
     model: nnx.Module,
     dataset: DatasetDict,
     training_config: TrainingConfig,
-) -> float:
-    # Log configuration parameters
-    mlflow.log_params(asdict(training_config))
-
+) -> nnx.Module:
     # Init the training state
     early_stop = EarlyStopping(patience=3, min_delta=1e-3)
 
@@ -52,12 +44,11 @@ def train_and_evaluate(
         accuracy=nnx.metrics.Accuracy(),
         loss=nnx.metrics.Average("loss"),
     )
-    mlflow.log_param(
-        "nb_parameters", sum(p.size for p in tree_leaves(nnx.split(model)[1]))
-    )
 
-    for epoch in range(1, training_config.epochs_number + 1):
+    for epoch in range(1, training_config.epochs + 1):
+        # Shuffle the dataset at each epoch
         dataset = dataset.shuffle(keep_in_memory=True)
+
         # Training loop
         for batch in tqdm(
             dataset["train"].iter(
@@ -95,23 +86,13 @@ def train_and_evaluate(
         metrics.reset()  # reset metrics for next training epoch
 
         if early_stop.should_stop:
-            logging.info("Stopping due to no improvments of the evaluation loss.")
+            logging.warning(
+                "No improvments of the evaluation loss during"
+                + f" the last {early_stop.patience} epochs."
+            )
+            logging.warning(f"Could not reach epoch {training_config.epochs}.")
             break
 
-    # Inference testing of the model
-    images = next(dataset["test"].iter(batch_size=10))
-    fig = show_img_grid(images["image"], pred_step(model, images))
-    mlflow.log_figure(
-        figure=fig,
-        artifact_file="inference.pdf",
-    )
-    close(fig)
+    logging.info(f"Best metric is equal to {early_stop.best_metric}")
 
-    # Logging the model
-    mlflow.pyfunc.log_model(
-        artifact_path="trained_model",
-        python_model=FlaxModel(*nnx.split(model)),
-        input_example=np.array(images["image"]),  # TO CHANGE
-        # registered_model_name="cnn",
-    )
-    return early_stop.best_metric
+    return model
