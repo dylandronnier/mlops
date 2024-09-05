@@ -1,0 +1,6 @@
+# Architecture of Simple CNN
+defaults:
+  - base_simplecnn
+
+channels: 3
+num_classes: 10

@@ -14,7 +14,7 @@ from omegaconf import MISSING, OmegaConf, SCMode
 
 from train import train_and_evaluate
 from train.train import TrainingConfig
-from utils.confmodel import ConfigModel, store_model_config
+from utils.confmodel import ModelConfig, store_model_config
 
 # train_transforms = A.Compose(
 #     [
@@ -38,7 +38,7 @@ class Config:
     """Configuration of the experiment."""
 
     training_hp: TrainingConfig = MISSING
-    model: ConfigModel = MISSING
+    model: ModelConfig = MISSING
     hf_dataset: str = "cifar10"
     seed: int = 42
 
@@ -46,7 +46,7 @@ class Config:
 cs = ConfigStore.instance()
 cs.store(name="base_config", node=Config)
 cs.store(group="training_hp", name="base_trainingconfig", node=TrainingConfig)
-for module in ["visiontransformer", "densenet", "resnet"]:
+for module in ["visiontransformer", "densenet", "resnet", "simplecnn"]:
     store_model_config(cs=cs, module="models." + module)
 
 
