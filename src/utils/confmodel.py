@@ -7,7 +7,7 @@ from hydra.core.config_store import ConfigStore
 
 
 @dataclass
-class ConfigModel(ABC):
+class ModelConfig(ABC):
     @abstractmethod
     def to_model(self, *, rngs: nnx.Rngs) -> nnx.Module:
         pass
@@ -26,7 +26,7 @@ def store_model_config(cs: ConfigStore, module: str):
     cls = make_dataclass(
         cls_name="Config" + name,
         fields=new_fields,
-        bases=(ConfigModel,),
+        bases=(ModelConfig,),
         namespace={
             "to_model": lambda self, *, rngs: mod.NeuralNetwork(
                 mod.Architecture(**asdict(self)), rngs=rngs

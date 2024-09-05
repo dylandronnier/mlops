@@ -1,4 +1,5 @@
 from flax import nnx
+from jax import Array
 
 
 class BasicBlock(nnx.Module):
@@ -34,22 +35,22 @@ class BasicBlock(nnx.Module):
         )
 
         self.batch_norm = nnx.BatchNorm(
-            momentum=0.9, num_features=out_features, rngs=rngs
+            momentum=0.9,
+            num_features=out_features,
+            use_running_average=False,
+            rngs=rngs,
         )
 
-    def __call__(self, x, train: bool = True):
+    def __call__(self, x: Array):
         """Run Residual Block.
 
         Args:
         ----
             x (tensor): Input tensor of shape [N, H, W, C].
-            train (bool): Training mode.
 
         Returns:
         -------
             (tensor): Output shape of shape [N, H', W', features].
 
         """
-        return nnx.relu(
-            self.batch_norm(self.convolution_layer(x), use_running_average=train)
-        )
+        return nnx.relu(self.batch_norm(self.convolution_layer(x)))

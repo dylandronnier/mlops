@@ -8,7 +8,6 @@ from models._basic_cnn_block import BasicBlock
 
 
 class _ResNetBlock(nnx.Module):
-
     """Residual Block."""
 
     def __init__(
@@ -75,22 +74,21 @@ class _ResNetBlock(nnx.Module):
                 rngs=rngs,
             )
 
-    def __call__(self, x: Array, train: bool = True):
+    def __call__(self, x: Array):
         """Run Residual Block.
 
         Args:
         ----
             x (tensor): Input tensor of shape [N, H, W, C].
-            train (bool): Training mode.
 
         Returns:
         -------
             (tensor): Output shape of shape [N, H', W', features].
 
         """
-        out = nnx.relu(self.bn1(self.conv1(x), use_running_average=train))
+        out = nnx.relu(self.bn1(self.conv1(x)))
 
-        out = nnx.relu(self.bn2(self.conv2(out), use_running_average=train))
+        out = nnx.relu(self.bn2(self.conv2(out)))
 
         if x.shape != out.shape:
             x = self.proj_norm(self.proj(x))
@@ -107,7 +105,6 @@ class Architecture:
 
 
 class NeuralNetwork(nnx.Module):
-
     """Residual Neural Network."""
 
     def __init__(self, arch: Architecture, *, rngs: nnx.Rngs) -> None:
@@ -148,14 +145,14 @@ class NeuralNetwork(nnx.Module):
             rngs=rngs,
         )
 
-    def __call__(self, x, train: bool = False):
+    def __call__(self, x):
         # Apply first CNN layer followed by MaxPooling
-        x = self._basic(x, train)
+        x = self._basic(x)
         x = nnx.max_pool(x, window_shape=(3, 3), strides=(2, 2), padding="SAME")
 
         # Apply the residual blocks
         for b in self._resnetblocks:
-            x = b(x, train)
+            x = b(x)
 
         # Mean
         x = mean(x, axis=(1, 2))

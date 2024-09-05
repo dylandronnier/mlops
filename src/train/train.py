@@ -35,7 +35,7 @@ def train_and_evaluate(
     training_config: TrainingConfig,
 ) -> nnx.Module:
     # Init the training state
-    early_stop = EarlyStopping(patience=3, min_delta=1e-3)
+    early_stop = EarlyStopping(patience=5, min_delta=1e-3)
 
     optimizer = nnx.Optimizer(
         model, sgd(training_config.learning_rate, training_config.momentum)
@@ -50,6 +50,7 @@ def train_and_evaluate(
         dataset = dataset.shuffle(keep_in_memory=True)
 
         # Training loop
+        model.train()
         for batch in tqdm(
             dataset["train"].iter(
                 batch_size=training_config.batch_size, drop_last_batch=True
@@ -68,6 +69,7 @@ def train_and_evaluate(
         metrics.reset()  # reset metrics for test set
 
         # Evaluation loop
+        model.eval()
         for batch in tqdm(
             dataset["test"].iter(
                 batch_size=training_config.batch_size, drop_last_batch=True
@@ -76,6 +78,8 @@ def train_and_evaluate(
             total=len(dataset["test"]) // training_config.batch_size,
         ):
             eval_step(model=model, metrics=metrics, batch=batch)
+            # print(pred_step(model=model, batch=batch))
+            # print(batch["label"])
 
         # Log test metrics
         for metric, value in metrics.compute().items():
