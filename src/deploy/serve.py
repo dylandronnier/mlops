@@ -6,12 +6,15 @@ from flax.serialization import from_bytes
 from jax.nn import softmax
 from mlflow.pyfunc import PythonModel, PythonModelContext
 
+from train.steps import pred_step
+
 
 class FlaxModel(PythonModel):
     def __init__(self, graphdef: nnx.GraphDef, state: Optional[nnx.State]) -> None:
         self._graphdef = graphdef
         if state:
             self._model = nnx.merge(self._graphdef, state)
+            self._model.eval()
             self._init = True
         else:
             self._init = False
@@ -20,5 +23,6 @@ class FlaxModel(PythonModel):
         if not self._init:
             self._state = from_bytes(self._state, context.artifacts["weights"])
 
-    def predict(self, context: PythonModelContext, model_input) -> np.ndarray:
-        return np.array(softmax(self._model(model_input, train=False)))
+    def predict(self, context: PythonModelContext, input) -> np.ndarray:
+        logits = pred_step(self._model, input)
+        return np.array(softmax(logits))

@@ -1,0 +1,9 @@
+# Paramters of MNIST
+defaults:
+  - base_datasetconfig
+
+hf_id: "mnist"
+images_width: 28
+images_height: 28
+channels: 1
+num_classes: 10

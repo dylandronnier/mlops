@@ -9,8 +9,10 @@ from hydra.core.config_store import ConfigStore
 @dataclass
 class ModelConfig(ABC):
     @abstractmethod
-    def to_model(self, *, rngs: nnx.Rngs) -> nnx.Module:
-        pass
+    def to_model(
+        self, *, channels: int, num_classes: int, rngs: nnx.Rngs
+    ) -> nnx.Module:
+        raise NotImplementedError
 
 
 def store_model_config(cs: ConfigStore, module: str):
@@ -28,9 +30,12 @@ def store_model_config(cs: ConfigStore, module: str):
         fields=new_fields,
         bases=(ModelConfig,),
         namespace={
-            "to_model": lambda self, *, rngs: mod.NeuralNetwork(
-                mod.Architecture(**asdict(self)), rngs=rngs
-            )
+            "to_model": lambda self, *, channels, num_classes, rngs: mod.NeuralNetwork(
+                mod.Architecture(**asdict(self)),
+                channels=channels,
+                num_classes=num_classes,
+                rngs=rngs,
+            ),
         },
     )
     cs.store(group="model", name="base_" + name, node=cls)

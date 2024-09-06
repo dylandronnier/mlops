@@ -78,8 +78,6 @@ def train_and_evaluate(
             total=len(dataset["test"]) // training_config.batch_size,
         ):
             eval_step(model=model, metrics=metrics, batch=batch)
-            # print(pred_step(model=model, batch=batch))
-            # print(batch["label"])
 
         # Log test metrics
         for metric, value in metrics.compute().items():

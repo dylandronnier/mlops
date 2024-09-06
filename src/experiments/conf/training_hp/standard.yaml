@@ -1,7 +1,7 @@
 defaults:
   - base_trainingconfig
 
-epochs_number: 200
+epochs: 200
 batch_size: 32
 learning_rate: 0.001
 momentum: 0.9

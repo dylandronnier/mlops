@@ -1,0 +1,10 @@
+# Paramters of CIFAR10
+defaults:
+  - base_datasetconfig
+
+hf_id: "cifar10"
+images_width: 32
+images_height: 32
+channels: 3
+num_classes: 10
+image_column_name: "img"

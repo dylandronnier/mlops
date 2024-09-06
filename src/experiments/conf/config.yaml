@@ -1,6 +1,7 @@
 defaults:
   - base_config
   - training_hp: standard
-  - model: resnet18
+  - model: ???
+  - dataset: ???
   - _self_
 

@@ -2,12 +2,11 @@ from collections.abc import Iterable
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
-from flax.typing import Array
 from matplotlib.figure import Figure
+from PIL.Image import Image
 
 
-def show_img(img: Array, ax=None, title: Optional[str] = None) -> None:
+def show_img(img: Image, ax=None, title: Optional[str] = None) -> None:
     """Shows a single image."""
     if ax is None:
         ax = plt.gca()
@@ -18,10 +17,19 @@ def show_img(img: Array, ax=None, title: Optional[str] = None) -> None:
         ax.set_title(title)
 
 
-def show_img_grid(imgs: list[Array], titles: Iterable[str]) -> Figure:
+def show_img_grid(
+    imgs: list[Image],
+    titles: Iterable[str],
+    images_per_row: int,
+    images_per_column: int,
+) -> Figure:
     """Shows a grid of images."""
-    n = int(np.ceil(len(imgs) ** 0.5))
-    fig, axs = plt.subplots(n, n, figsize=(4 * n, 4 * n))
+    fig, axs = plt.subplots(
+        images_per_row,
+        images_per_column,
+        figsize=(4 * images_per_row, 4 * images_per_column),
+    )
     for i, (img, title) in enumerate(zip(imgs, titles)):
-        show_img(img, axs[i // n][i % n], title)
+        j = i // images_per_row
+        show_img(img, axs, title)
     return fig

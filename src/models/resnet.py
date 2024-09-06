@@ -98,8 +98,6 @@ class _ResNetBlock(nnx.Module):
 
 @dataclass
 class Architecture:
-    num_classes: int
-    channels: int
     stage_sizes: list[int]
     num_filers: int = 64
 
@@ -107,10 +105,12 @@ class Architecture:
 class NeuralNetwork(nnx.Module):
     """Residual Neural Network."""
 
-    def __init__(self, arch: Architecture, *, rngs: nnx.Rngs) -> None:
+    def __init__(
+        self, arch: Architecture, *, channels: int, num_classes: int, rngs: nnx.Rngs
+    ) -> None:
         # Basic block for first layer
         self._basic = BasicBlock(
-            in_features=arch.channels,
+            in_features=channels,
             out_features=arch.num_filers,
             kernel_size=(3, 3),
             rngs=rngs,
@@ -141,7 +141,7 @@ class NeuralNetwork(nnx.Module):
         # Fully connected last layer
         self._fullyconnected = nnx.Linear(
             in_features=arch.num_filers * 2 ** (len(arch.stage_sizes) - 1),
-            out_features=arch.num_classes,
+            out_features=num_classes,
             rngs=rngs,
         )
 

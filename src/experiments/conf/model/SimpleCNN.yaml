@@ -2,5 +2,8 @@
 defaults:
   - base_simplecnn
 
-channels: 3
-num_classes: 10
+cnn_fliters: [32, 64]
+layers_sizes: [2, 2]
+fc_layers_widths: [256]
+intermediate_size: 3136
+

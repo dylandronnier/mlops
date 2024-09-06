@@ -17,7 +17,9 @@ class _DenseLayer(nnx.Module):
         rngs: nnx.Rngs,
     ) -> None:
         super().__init__()
-        self.norm1 = nnx.BatchNorm(num_features=num_input_features, rngs=rngs)
+        self.norm1 = nnx.BatchNorm(
+            num_features=num_input_features, use_running_average=False, rngs=rngs
+        )
         self.conv1 = nnx.Conv(
             in_features=num_input_features,
             out_features=bn_size * growth_rate,
@@ -27,7 +29,9 @@ class _DenseLayer(nnx.Module):
             rngs=rngs,
         )
 
-        self.norm2 = nnx.BatchNorm(num_features=bn_size * growth_rate, rngs=rngs)
+        self.norm2 = nnx.BatchNorm(
+            num_features=bn_size * growth_rate, use_running_average=False, rngs=rngs
+        )
         self.conv2 = nnx.Conv(
             in_features=bn_size * growth_rate,
             out_features=growth_rate,
@@ -38,14 +42,10 @@ class _DenseLayer(nnx.Module):
             rngs=rngs,
         )
 
-    def __call__(self, x: list[Array], train: bool) -> Array:
+    def __call__(self, x: list[Array]) -> Array:
         concated_features = jnp.concatenate(x, axis=-1)
-        bottleneck_output = self.conv1(
-            nnx.relu(self.norm1(concated_features, use_running_average=train))
-        )
-        return self.conv2(
-            nnx.relu(self.norm2(bottleneck_output, use_running_average=train))
-        )
+        bottleneck_output = self.conv1(nnx.relu(self.norm1(concated_features)))
+        return self.conv2(nnx.relu(self.norm2(bottleneck_output)))
 
 
 class _DenseBlock(nnx.Module):
@@ -69,10 +69,10 @@ class _DenseBlock(nnx.Module):
                 )
             )
 
-    def __call__(self, init_features: Array, train: bool) -> Array:
+    def __call__(self, init_features: Array) -> Array:
         features = [init_features]
         for layer in self.layers:
-            new_features = layer(features, train)
+            new_features = layer(features)
             features.append(new_features)
         return jnp.concat(features, axis=-1)
 
@@ -81,7 +81,9 @@ class _Transition(nnx.Module):
     def __init__(
         self, num_input_features: int, num_output_features: int, *, rngs: nnx.Rngs
     ) -> None:
-        self.norm = nnx.BatchNorm(num_features=num_input_features, rngs=rngs)
+        self.norm = nnx.BatchNorm(
+            num_features=num_input_features, use_running_average=False, rngs=rngs
+        )
         self.conv = nnx.Conv(
             in_features=num_input_features,
             out_features=num_output_features,
@@ -91,9 +93,9 @@ class _Transition(nnx.Module):
             rngs=rngs,
         )
 
-    def __call__(self, x: Array, train: bool) -> Array:
+    def __call__(self, x: Array) -> Array:
         return nnx.avg_pool(
-            self.conv(nnx.relu(self.norm(x, use_running_average=train))),
+            self.conv(nnx.relu(self.norm(x))),
             window_shape=(2, 2),
             strides=(2, 2),
         )
@@ -101,16 +103,13 @@ class _Transition(nnx.Module):
 
 @dataclass
 class Architecture:
-    channels: int = 3
     growth_rate: int = 12
     block_config: tuple[int, int, int, int] = (3, 6, 12, 8)
     num_init_features: int = 32
     bn_size: int = 4
-    num_classes: int = 10
 
 
 class NeuralNetwork(nnx.Module):
-
     r"""Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_.
 
@@ -130,10 +129,12 @@ class NeuralNetwork(nnx.Module):
         self,
         hp: Architecture,
         *,
+        channels: int,
+        num_classes: int,
         rngs: nnx.Rngs,
     ) -> None:
         self.basic_cnn = BasicBlock(
-            in_features=hp.channels,
+            in_features=channels,
             out_features=hp.num_init_features,
             kernel_size=(3, 3),
             rngs=rngs,
@@ -166,13 +167,13 @@ class NeuralNetwork(nnx.Module):
         # Final batch norm
         self.layers.append(nnx.BatchNorm(num_features=num_features, rngs=rngs))
         self.head = nnx.Linear(
-            in_features=num_features, out_features=hp.num_classes, rngs=rngs
+            in_features=num_features, out_features=num_classes, rngs=rngs
         )
 
-    def __call__(self, x: Array, train: bool) -> Array:
-        x = nnx.max_pool(self.basic_cnn(x, train), window_shape=(2, 2), strides=(2, 2))
+    def __call__(self, x: Array) -> Array:
+        x = nnx.max_pool(self.basic_cnn(x), window_shape=(2, 2), strides=(2, 2))
         for layer in self.layers:
-            x = layer(x, train)
+            x = layer(x)
         x = nnx.avg_pool(
             x, window_shape=(x.shape[1], x.shape[2]), strides=(x.shape[0], x.shape[1])
         )

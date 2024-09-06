@@ -1,61 +1,31 @@
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from functools import partial
 
 import augmax
 import hydra
 import jax.numpy as jnp
+import jax.random as jrand
 import mlflow
 import numpy as np
 from datasets import Array3D, DatasetDict, load_dataset
 from flax import nnx
 from hydra.core.config_store import ConfigStore
-from jax import jit, vmap
-from matplotlib.pyplot import close
-from omegaconf import MISSING, OmegaConf, SCMode
+from jax import jit
+from omegaconf import OmegaConf, SCMode
 
 from deploy.serve import FlaxModel
 from train import train_and_evaluate
 from train.steps import pred_step
-from train.train import TrainingConfig
-from utils.confmodel import ModelConfig, store_model_config
+from utils.config import GlobalConfig, prepare_configuration_store
 from utils.networks import number_of_parameters
-from utils.plot import show_img_grid
-
-mean = jnp.array([0.4914, 0.4822, 0.4465])
-std = jnp.array([0.203, 0.1994, 0.2010])
-transform = augmax.Chain(
-    augmax.ByteToFloat(),
-    augmax.Normalize(mean=mean, std=std),
-)
-jit_transform = jit(partial(transform, rng=jnp.array(0)))
-
-
-def plot_inference(model: nnx.Module, batch):
-    inputs = vmap(partial(transform, rng=jnp.array(0)))(batch["image"])
-    predicted_label = pred_step(model, inputs)
-    return show_img_grid(batch["image"], predicted_label)
-
-
-@dataclass
-class Config:
-    """Configuration of the experiment."""
-
-    training_hp: TrainingConfig = MISSING
-    model: ModelConfig = MISSING
-    hf_dataset: str = "cifar10"
-    seed: int = 42
-
 
 cs = ConfigStore.instance()
-cs.store(name="base_config", node=Config)
-cs.store(group="training_hp", name="base_trainingconfig", node=TrainingConfig)
-for module in ["visiontransformer", "densenet", "resnet", "simplecnn"]:
-    store_model_config(cs=cs, module="models." + module)
+prepare_configuration_store(cs)
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
-def app(conf: Config) -> None:
+def app(conf: GlobalConfig) -> None:
     """Train a VisionTransformer on the CIFAR10 dataset.
 
     Args:
@@ -64,26 +34,51 @@ def app(conf: Config) -> None:
     """
     # Load dataset
     hf_dataset = load_dataset(
-        path=conf.hf_dataset,
-    ).rename_column("img", "image")
+        path=conf.dataset.hf_id,
+    )
+
+    if conf.dataset.image_column_name != "image":
+        hf_dataset = hf_dataset.rename_column(conf.dataset.image_column_name, "image")
 
     # Ensure the datasets is a Dataset Dictionary
     if not (isinstance(hf_dataset, DatasetDict)):
         raise TypeError
 
+    if conf.dataset.channels == 3:
+        mean = jnp.array([0.4914, 0.4822, 0.4465])
+        std = jnp.array([0.203, 0.1994, 0.2010])
+    else:
+        mean = jnp.array(0.5)
+        std = jnp.array(0.2)
+
+    transform = augmax.Chain(
+        augmax.ByteToFloat(),
+        augmax.Normalize(mean=mean, std=std),
+    )
+    jit_transform = jit(partial(transform, rng=jrand.PRNGKey(conf.seed)))
+
     # Preprocess the data
-    hf_dataset_gpu = (
-        hf_dataset.with_format("jax")
-        .map(
-            lambda ex: {"image": jit_transform(inputs=ex["image"])},
-            batched=True,
-            batch_size=16,
-        )
-        .cast_column("image", feature=Array3D(shape=(32, 32, 3), dtype="float32"))
+    hf_dataset_gpu = hf_dataset.with_format("jax")
+    hf_dataset_gpu = hf_dataset_gpu.map(
+        lambda ex: {"image": jit_transform(inputs=jnp.expand_dims(ex["image"], -1))},
+        batched=True,
+        batch_size=16,
+    )
+
+    hf_dataset_gpu = hf_dataset_gpu.cast_column(
+        "image",
+        feature=Array3D(
+            shape=(
+                conf.dataset.images_width,
+                conf.dataset.images_height,
+                conf.dataset.channels,
+            ),
+            dtype="float32",
+        ),
     )
 
     logging.info(
-        msg=f"The dataset {conf.hf_dataset} has been preprocessed. "
+        msg=f"The dataset {conf.dataset.hf_id} has been preprocessed. "
         + "It is ready for the learning task."
     )
 
@@ -94,7 +89,11 @@ def app(conf: Config) -> None:
     dc_model = OmegaConf.to_container(
         cfg=conf.model, structured_config_mode=SCMode.INSTANTIATE, resolve=True
     )
-    mod = dc_model.to_model(rngs=nnx.Rngs(conf.seed))
+    mod = dc_model.to_model(
+        channels=conf.dataset.channels,
+        num_classes=conf.dataset.num_classes,
+        rngs=nnx.Rngs(conf.seed),
+    )
     mlflow.log_param("nb_parameters", number_of_parameters(mod))
 
     # Train and evaluate
@@ -108,12 +107,10 @@ def app(conf: Config) -> None:
 
     # Inference testing of the model
     batch = next(hf_dataset["test"].iter(batch_size=10))
-    fig = plot_inference(mod, batch)
-    mlflow.log_figure(
-        figure=fig,
-        artifact_file="inference.pdf",
-    )
-    close(fig)
+    inputs = jit_transform(inputs=jnp.expand_dims(np.array(batch["image"]), -1))
+    predicted_label = pred_step(mod, inputs)
+    for im, pred_l, true_l in zip(batch["image"], predicted_label, batch["label"]):
+        mlflow.log_image(im, key=f"Predicted {pred_l} / True {true_l}")
 
     # Logging the model
     mlflow.pyfunc.log_model(

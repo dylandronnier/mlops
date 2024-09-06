@@ -1,16 +1,18 @@
 from dataclasses import dataclass
 
 from flax import nnx
+from flax.nnx.nnx.nn.linear import Linear
 from jax import Array
-from jax.numpy import mean
 
 from models._basic_cnn_block import BasicBlock
 
 
 @dataclass
 class Architecture:
-    num_classes: int
-    channels: int
+    cnn_fliters: list[int]
+    layers_sizes: list[int]
+    fc_layers_widths: list[int]
+    intermediate_size: int
 
 
 class _SimpleCNNBlock(nnx.Module):
@@ -47,44 +49,60 @@ class _SimpleCNNBlock(nnx.Module):
 class NeuralNetwork(nnx.Module):
     """A simple CNN model."""
 
-    def __init__(self, arch: Architecture, *, rngs: nnx.Rngs):
-        self.first = _SimpleCNNBlock(
-            in_features=arch.channels, out_features=32, nb_conv_layers=2, rngs=rngs
-        )
+    def __init__(
+        self, arch: Architecture, *, channels: int, num_classes: int, rngs: nnx.Rngs
+    ):
+        i = channels
+        self._cnn_part = list()
+        for f, nb in zip(arch.cnn_fliters, arch.layers_sizes):
+            self._cnn_part.append(
+                _SimpleCNNBlock(
+                    in_features=i, out_features=f, nb_conv_layers=nb, rngs=rngs
+                )
+            )
+            i = f
 
-        self.second = _SimpleCNNBlock(
-            in_features=32, out_features=64, nb_conv_layers=2, rngs=rngs
-        )
+        # self.second = _SimpleCNNBlock(
+        #     in_features=32, out_features=64, nb_conv_layers=2, rngs=rngs
+        # )
 
-        self.third = _SimpleCNNBlock(
-            in_features=64, out_features=128, nb_conv_layers=2, rngs=rngs
-        )
+        # self.third = _SimpleCNNBlock(
+        #     in_features=64, out_features=128, nb_conv_layers=2, rngs=rngs
+        # )
 
-        self.fourth = _SimpleCNNBlock(
-            in_features=128, out_features=256, nb_conv_layers=3, rngs=rngs
-        )
+        # self.fourth = _SimpleCNNBlock(
+        #     in_features=128, out_features=256, nb_conv_layers=3, rngs=rngs
+        # )
 
-        self.fifth = _SimpleCNNBlock(
-            in_features=256, out_features=512, nb_conv_layers=3, rngs=rngs
-        )
+        # self.fifth = _SimpleCNNBlock(
+        #     in_features=256, out_features=512, nb_conv_layers=3, rngs=rngs
+        # )
 
-        self.linear1 = nnx.Linear(in_features=512, out_features=512, rngs=rngs)
-        self.do1 = nnx.Dropout(0.5, deterministic=True, rngs=rngs)
-        self.linear2 = nnx.Linear(in_features=512, out_features=256, rngs=rngs)
-        self.do2 = nnx.Dropout(0.5, deterministic=True, rngs=rngs)
-        self.head = nnx.Linear(
-            in_features=256, out_features=arch.num_classes, rngs=rngs
-        )
+        self._fully_connected = list()
+        i = arch.intermediate_size
+        for nb in arch.fc_layers_widths:
+            self._fully_connected.append(
+                Linear(in_features=i, out_features=nb, rngs=rngs)
+            )
+            i = nb
+        self._head = nnx.Linear(in_features=i, out_features=num_classes, rngs=rngs)
+
+        # self.linear1 = nnx.Linear(in_features=512, out_features=512, rngs=rngs)
+        # self.do1 = nnx.Dropout(0.5, deterministic=True, rngs=rngs)
+        # self.linear2 = nnx.Linear(in_features=512, out_features=256, rngs=rngs)
+        # self.do2 = nnx.Dropout(0.5, deterministic=True, rngs=rngs)
+        # self.head = nnx.Linear(in_features=256, out_features=num_classes, rngs=rngs)
 
     def __call__(self, x: Array) -> Array:
-        x = self.first(x)
-        x = self.second(x)
-        x = self.third(x)
-        x = self.fourth(x)
-        x = self.fifth(x)
-        # x = x.reshape(x.shape[0], -1)  # flatten
-        x = mean(x, axis=(1, 2))
-        x = self.do1(nnx.relu(self.linear1(x)))
-        x = self.do2(nnx.relu(self.linear2(x)))
-        x = self.head(x)
+        for l in self._cnn_part:
+            x = l(x)
+
+        x = x.reshape(x.shape[0], -1)  # flatten
+
+        for l in self._fully_connected:
+            x = nnx.relu(l(x))
+        # x = mean(x, axis=(1, 2))
+        # x = self.do1(nnx.relu(self.linear1(x)))
+        # x = self.do2(nnx.relu(self.linear2(x)))
+        x = self._head(x)
         return x

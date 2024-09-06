@@ -1,4 +1,5 @@
 from flax import nnx
+from jax import Array
 from optax.losses import softmax_cross_entropy_with_integer_labels
 
 
@@ -29,6 +30,6 @@ def eval_step(model: nnx.Module, metrics: nnx.MultiMetric, batch):
 
 
 @nnx.jit
-def pred_step(model: nnx.Module, batch):
-    logits = model(batch["image"])
+def pred_step(model: nnx.Module, images: Array):
+    logits = model(images)
     return logits.argmax(axis=1)
