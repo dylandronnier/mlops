@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from train.train import TrainingConfig
 from utils.confmodel import ModelConfig, store_model_config
 
 
@@ -17,6 +16,23 @@ class DatasetConfig:
     channels: int = MISSING
     num_classes: int = MISSING
     image_column_name: str = "image"
+
+
+@dataclass
+class TrainingConfig:
+    """Class that defines the parameters for the gradient descent."""
+
+    # Number of epochs
+    epochs: int = MISSING
+
+    # Batch size
+    batch_size: int = MISSING
+
+    # Learning rate
+    learning_rate: float = MISSING
+
+    # Momentum.
+    momentum: float = MISSING
 
 
 @dataclass

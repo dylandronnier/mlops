@@ -10,6 +10,7 @@ wheels/
 .venv
 
 mlruns/
+.aim/
 *.csv
 *.png
 outputs/
