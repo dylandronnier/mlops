@@ -102,7 +102,7 @@ class Architecture:
     num_filers: int = 64
 
 
-class NeuralNetwork(nnx.Module):
+class ResNet(nnx.Module):
     """Residual Neural Network."""
 
     def __init__(

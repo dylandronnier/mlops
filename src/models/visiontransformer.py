@@ -125,50 +125,50 @@ class Architecture:
     attention_dropout_rate: float
 
 
-class NeuralNetwork(nnx.Module):
+class ViT(nnx.Module):
     """VisionTransformer."""
 
     def __init__(
         self,
-        hp: Architecture,
+        architecture: Architecture,
         *,
         rngs: nnx.Rngs,
     ) -> None:
         self.pos_embedding = nnx.Param(
             nnx.initializers.normal(stddev=1.0)(
                 rngs.params(),
-                shape=(1, 1 + hp.num_patches, hp.embed_dim),
+                shape=(1, 1 + architecture.num_patches, architecture.embed_dim),
             )
         )
         self.cls_token = nnx.Param(
             nnx.initializers.normal(stddev=1.0)(
-                rngs.params(), shape=(1, 1, hp.embed_dim)
+                rngs.params(), shape=(1, 1, architecture.embed_dim)
             )
         )
         self.patch_embedding = nnx.Conv(
-            in_features=hp.channels,
-            out_features=hp.embed_dim,
-            kernel_size=(hp.patches_size, hp.patches_size),
-            strides=hp.patches_size,
+            in_features=architecture.channels,
+            out_features=architecture.embed_dim,
+            kernel_size=(architecture.patches_size, architecture.patches_size),
+            strides=architecture.patches_size,
             padding="VALID",
             rngs=rngs,
         )
         self.transformer_layers = []
-        for _ in range(hp.layers):
+        for _ in range(architecture.layers):
             self.transformer_layers.append(
                 _AttentionBlock(
-                    in_features=hp.embed_dim,
-                    out_features=hp.embed_dim,
-                    mlp_dim=hp.mlp_dim,
-                    num_heads=hp.num_heads,
-                    dropout_rate=hp.dropout_rate,
-                    attention_dropout_rate=hp.attention_dropout_rate,
+                    in_features=architecture.embed_dim,
+                    out_features=architecture.embed_dim,
+                    mlp_dim=architecture.mlp_dim,
+                    num_heads=architecture.num_heads,
+                    dropout_rate=architecture.dropout_rate,
+                    attention_dropout_rate=architecture.attention_dropout_rate,
                     rngs=rngs,
                 )
             )
         self.final_layer = nnx.Linear(
-            in_features=hp.embed_dim,
-            out_features=hp.num_classes,
+            in_features=architecture.embed_dim,
+            out_features=architecture.num_classes,
             rngs=rngs,
         )
 

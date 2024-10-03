@@ -109,7 +109,7 @@ class Architecture:
     bn_size: int = 4
 
 
-class NeuralNetwork(nnx.Module):
+class DenseNet(nnx.Module):
     r"""Densenet-BC model class, based on
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_.
 
@@ -127,7 +127,7 @@ class NeuralNetwork(nnx.Module):
 
     def __init__(
         self,
-        hp: Architecture,
+        architecture: Architecture,
         *,
         channels: int,
         num_classes: int,
@@ -135,26 +135,26 @@ class NeuralNetwork(nnx.Module):
     ) -> None:
         self.basic_cnn = BasicBlock(
             in_features=channels,
-            out_features=hp.num_init_features,
+            out_features=architecture.num_init_features,
             kernel_size=(3, 3),
             rngs=rngs,
         )
 
         self.layers = list()
         # Each denseblock
-        num_features = hp.num_init_features
-        for i, num_layers in enumerate(hp.block_config):
+        num_features = architecture.num_init_features
+        for i, num_layers in enumerate(architecture.block_config):
             self.layers.append(
                 _DenseBlock(
                     num_layers=num_layers,
                     num_input_features=num_features,
-                    bn_size=hp.bn_size,
-                    growth_rate=hp.growth_rate,
+                    bn_size=architecture.bn_size,
+                    growth_rate=architecture.growth_rate,
                     rngs=rngs,
                 )
             )
-            num_features = num_features + num_layers * hp.growth_rate
-            if i != len(hp.block_config) - 1:
+            num_features = num_features + num_layers * architecture.growth_rate
+            if i != len(architecture.block_config) - 1:
                 self.layers.append(
                     _Transition(
                         num_input_features=num_features,

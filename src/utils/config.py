@@ -1,9 +1,13 @@
-from dataclasses import dataclass
+import inspect
+from abc import ABC
+from dataclasses import dataclass, field, make_dataclass
 
+from flax.nnx import Module
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from utils.confmodel import ModelConfig, store_model_config
+from models import *
+from models.densenet import DenseNet
 
 
 @dataclass
@@ -36,6 +40,34 @@ class TrainingConfig:
 
 
 @dataclass
+class ModelConfig(ABC):
+    _partial_: bool = True
+
+
+def store_model_config(cs: ConfigStore, nn_cls: type[Module]) -> None:
+    name = nn_cls.__name__
+    mod = inspect.getmodule(nn_cls)
+    if mod is None:
+        raise TypeError
+    module_name = mod.__name__
+
+    new_fields = [("_target_", str, module_name + "." + name)]
+    for f in inspect.signature(nn_cls.__init__).parameters.values():
+        if f.name in ["channels", "num_classes", "rngs", "self"]:
+            continue
+        if f.default == inspect._empty:
+            new_fields.append((f.name, f.annotation, field(default=MISSING)))
+        else:
+            new_fields.append((f.name, f.annotation, f.default))
+    cls = make_dataclass(
+        cls_name="Config" + name,
+        fields=new_fields,
+        bases=(ModelConfig,),
+    )
+    cs.store(group="model", name="base_" + name, node=cls)
+
+
+@dataclass
 class GlobalConfig:
     """Configuration of the experiment."""
 
@@ -49,5 +81,5 @@ def prepare_configuration_store(cs: ConfigStore):
     cs.store(name="base_config", node=GlobalConfig)
     cs.store(group="training_hp", name="base_trainingconfig", node=TrainingConfig)
     cs.store(group="dataset", name="base_datasetconfig", node=DatasetConfig)
-    for module in ["visiontransformer", "densenet", "resnet", "simplecnn"]:
-        store_model_config(cs=cs, module="models." + module)
+    for cls in [SimpleCNN, ResNet, DenseNet, ViT]:
+        store_model_config(cs, cls)

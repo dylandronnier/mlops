@@ -1,13 +1,13 @@
 from typing import Any
 
+import hydra
 import jax.numpy as jnp
 import mlflow
 import optuna
-import tyro
 from datasets import DatasetDict, load_dataset
 from flax import nnx
-from models import CNN
 from optuna.integration.mlflow import MLflowCallback
+
 from train import TrainingConfig, train_and_evaluate
 from utils.dist import RangeFloat, make_config_suggest
 
@@ -34,7 +34,7 @@ def champion_callback(
         )
 
 
-@tyro.cli
+@hydra.main
 def main(num_trials: int, seed: int = 42) -> None:
     """Run hyperparameters search experiment with a basic CNN.
 

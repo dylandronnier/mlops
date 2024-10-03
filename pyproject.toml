@@ -27,7 +27,7 @@ requires-python = ">= 3.12"
 
 [project.scripts]
 hyper = 'experiments.hyperparams_opt:main'
-vit = 'experiments.vit:app'
+vit = 'experiments.train_app:app'
 
 [project.optional-dependencies]
 cuda = [

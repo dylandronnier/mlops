@@ -1,9 +1,10 @@
-# Architecture of Simple CNN
+# Architecture of a Simple CNN model
 defaults:
-  - base_simplecnn
+  - base_SimpleCNN
 
-cnn_fliters: [32, 64]
-layers_sizes: [2, 2]
-fc_layers_widths: [256]
-intermediate_size: 3136
+architecture:
+  cnn_fliters: [32, 64]
+  layers_sizes: [2, 2]
+  fc_layers_widths: [256]
+  intermediate_size: 3136
 

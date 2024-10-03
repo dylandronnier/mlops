@@ -1,7 +1,6 @@
 # Architecture of ResNet18
 defaults:
-  - base_resnet
+  - base_ResNet
 
-channels: 3
-stage_sizes: [2, 2, 2, 2]
-num_classes: 10
+architecture:
+  stage_sizes: [2, 2, 2, 2]

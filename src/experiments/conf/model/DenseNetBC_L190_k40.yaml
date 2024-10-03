@@ -1,9 +1,9 @@
+# DenseNet defined in 
 defaults:
-  - base_densenet
+  - base_DenseNet
 
-channels: 3
-growth_rate: 12
-block_config: [16, 16, 16]
-num_init_features: 16
-bn_size: 4
-num_classes: 10
+architecture:
+  growth_rate: 12
+  block_config: [16, 16, 16]
+  num_init_features: 16
+  bn_size: 4

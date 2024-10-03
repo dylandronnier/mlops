@@ -46,15 +46,20 @@ class _SimpleCNNBlock(nnx.Module):
         return x
 
 
-class NeuralNetwork(nnx.Module):
+class SimpleCNN(nnx.Module):
     """A simple CNN model."""
 
     def __init__(
-        self, arch: Architecture, *, channels: int, num_classes: int, rngs: nnx.Rngs
+        self,
+        architecture: Architecture,
+        *,
+        channels: int,
+        num_classes: int,
+        rngs: nnx.Rngs,
     ):
         i = channels
         self._cnn_part = list()
-        for f, nb in zip(arch.cnn_fliters, arch.layers_sizes):
+        for f, nb in zip(architecture.cnn_fliters, architecture.layers_sizes):
             self._cnn_part.append(
                 _SimpleCNNBlock(
                     in_features=i, out_features=f, nb_conv_layers=nb, rngs=rngs
@@ -79,8 +84,8 @@ class NeuralNetwork(nnx.Module):
         # )
 
         self._fully_connected = list()
-        i = arch.intermediate_size
-        for nb in arch.fc_layers_widths:
+        i = architecture.intermediate_size
+        for nb in architecture.fc_layers_widths:
             self._fully_connected.append(
                 Linear(in_features=i, out_features=nb, rngs=rngs)
             )

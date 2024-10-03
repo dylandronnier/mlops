@@ -1,5 +1,4 @@
 import logging
-from dataclasses import asdict
 from functools import partial
 
 import augmax
@@ -12,15 +11,19 @@ from datasets import Array3D, DatasetDict, load_dataset
 from flax import nnx
 from flax.training.early_stopping import EarlyStopping
 from hydra.core.config_store import ConfigStore
+from hydra.utils import instantiate
 from jax import jit
-from omegaconf import OmegaConf, SCMode
 from optax import sgd
 
 from train import eval_loop, log_and_track_metrics, pred_step, train_loop
-from utils.config import GlobalConfig, prepare_configuration_store
+from utils.config import (
+    GlobalConfig,
+    prepare_configuration_store,
+)
 from utils.networks import number_of_parameters
 from utils.stats import compute_mean_std
 
+# Setup Hydra
 cs = ConfigStore.instance()
 prepare_configuration_store(cs)
 
@@ -30,7 +33,7 @@ def app(conf: GlobalConfig) -> None:
     """Train a VisionTransformer on the CIFAR10 dataset.
 
     Args:
-        conf(Config): Configuration of the experiment.
+        conf (Config): Configuration of the experiment.
 
     """
     # Start recording with Aim
@@ -90,12 +93,9 @@ def app(conf: GlobalConfig) -> None:
     )
 
     # Initialize the model
-    dc_model = OmegaConf.to_container(
-        cfg=conf.model, structured_config_mode=SCMode.INSTANTIATE, resolve=True
-    )
-    mod = dc_model.to_model(
-        channels=conf.dataset.channels,
+    mod = instantiate(conf.model)(
         num_classes=conf.dataset.num_classes,
+        channels=conf.dataset.channels,
         rngs=nnx.Rngs(conf.seed),
     )
 
@@ -103,11 +103,8 @@ def app(conf: GlobalConfig) -> None:
     run["model"] = {"nb_parameters": number_of_parameters(mod)}
 
     # Train and evaluate
-    dc_training_hp = OmegaConf.to_container(
-        cfg=conf.training_hp, structured_config_mode=SCMode.INSTANTIATE, resolve=True
-    )
     # Log configuration parameters
-    run["hparams"] = asdict(dc_training_hp)
+    run["hparams"] = conf.training_hp
 
     # Init the training state
     early_stop = EarlyStopping(patience=5, min_delta=1e-3)
